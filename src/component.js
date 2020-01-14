@@ -70,7 +70,7 @@ export default class Component {
                 const setWasSuccessful = Reflect.set(obj, property, value)
 
                 // Don't react to data changes for cases like the `x-created` hook.
-                if (self.pauseReactivity) return
+                if (self.pauseReactivity) return setWasSuccessful
 
                 debounce(() => {
                     self.refresh()
@@ -183,6 +183,11 @@ export default class Component {
                     this.updatePresence(el, output)
                     break;
 
+                case 'for':
+                    var { attrName, output } = this.evaluateListExpression(expression)
+                    this.updateList(el, attrName, output)
+                    break;
+
                 case 'cloak':
                     el.removeAttribute('x-cloak')
                     break;
@@ -228,7 +233,7 @@ export default class Component {
                         }
                     })
                 }
-              }
+            }
         })
 
         observer.observe(targetNode, observerOptions);
@@ -321,6 +326,30 @@ export default class Component {
 
     evaluateReturnExpression(expression) {
         return saferEval(expression, this.$data)
+    }
+
+    evaluateListExpression(expression) {
+        const forRE = /([\s\S]*?)\s+in\s+([\s\S]*)/
+
+        const match = expression.match(forRE)
+
+        let attrName = ''
+
+        let output = []
+
+        if (!match || match.length !== 3) {
+            console.warn(
+                'AlpineJS Warning: [x-for] directive should follow this format "item in list"'
+            ) // @TODO reword message
+        } else {
+            attrName = match[1]
+            output = saferEval(match[2], this.$data)
+        }
+
+        return {
+            attrName,
+            output
+        }
     }
 
     evaluateCommandExpression(expression, extraData) {
@@ -431,6 +460,62 @@ export default class Component {
         Array.from(el.options).forEach(option => {
             option.selected = arrayWrappedValue.includes(option.value || option.text)
         })
+    }
+
+    updateList(el, attrName, expressionResult) {
+        if (el.nodeName.toLowerCase() !== 'template') console.warn(`Alpine: [x-for] directive should only be added to <template> tags.`)
+
+        if (el.content.children.length > 1) console.warn(`Alpine: [x-for] <template> should only have one child.`)
+
+        // We create a reference map to make sure we update the right items when the original date changes
+        if (! el.__x_inserted_items) {
+            el.__x_inserted_items = {}
+        }
+
+        let currentElement = el
+
+        const keyName = el.getAttribute('x-key')
+
+        expressionResult.forEach((item, index) => {
+            const key = keyName ? item[keyName] : index
+
+            const elementHasAlreadyBeenAdded = el.__x_inserted_items[key]
+
+            if (! elementHasAlreadyBeenAdded) {
+                const clone = document.importNode(el.content, true).firstElementChild
+
+                clone.setAttribute('x-data', JSON.stringify({ [attrName]: item }))
+
+                currentElement = el.parentElement.insertBefore(clone, currentElement.nextElementSibling)
+
+                el.__x_inserted_items[key] = currentElement
+
+                currentElement.__x_inserted_me = true
+
+                currentElement.__x_list_key = key
+
+                transitionIn(currentElement, () => {
+                    currentElement.__x = new Component(currentElement)
+                })
+            } else {
+                currentElement = el.parentElement.insertBefore(
+                    el.__x_inserted_items[key],
+                    currentElement.nextElementSibling
+                )
+
+                currentElement = el.__x_inserted_items[key]
+
+                currentElement.setAttribute('x-data', JSON.stringify({ [attrName]: item }))
+
+            }
+        })
+
+        // Clean up invalid elements
+        while (currentElement.nextElementSibling && currentElement.nextElementSibling.__x_inserted_me === true) {
+            delete el.__x_inserted_items[currentElement.nextElementSibling.__x_list_key]
+
+            currentElement.nextElementSibling.remove()
+        }
     }
 
     getRefsProxy() {

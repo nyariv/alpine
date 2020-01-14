@@ -257,6 +257,23 @@
                         </div>
                     </td>
                 </tr>
+
+                <tr>
+                    <td>Loop</td>
+                    <td>
+                        <div x-data="{ list: ['foo', 'bar'] }">
+                            <template x-for="item in list">
+                                <div>
+                                    <span x-text="item"></span>
+
+                                    <button x-on:click="item = 'baz'">Update to "baz"</button>
+                                </div>
+                            </template>
+
+                            <button x-on:click="list[0] = 'bob'">Update first item to "bob"</button>
+                        </div>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </body>
