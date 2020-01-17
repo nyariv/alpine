@@ -74,7 +74,8 @@ const Alpine = {
     },
 
     initializeComponent: function (el) {
-        el.__x = new Component(el)
+        // Skip it if already initialised. It could happen with nested components.
+        if (! el.__x) el.__x = new Component(el)
     }
 }
 

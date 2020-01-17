@@ -7,8 +7,10 @@ import { registerModelListener } from './directives/model'
 import { registerListener } from './directives/on'
 
 export default class Component {
-    constructor(el) {
+    constructor(el, parentData = null) {
         this.$el = el
+
+        this.$parentData = parentData
 
         const dataAttr = this.$el.getAttribute('x-data')
         const dataExpression = dataAttr === '' ? '{}' : dataAttr
@@ -73,7 +75,12 @@ export default class Component {
 
         const proxyHandler = {
             set(obj, property, value) {
-                const setWasSuccessful = Reflect.set(obj, property, value)
+                let setWasSuccessful = false
+                if (property in obj) {
+                    setWasSuccessful = Reflect.set(obj, property, value)
+                } else if (self.$parentData && property in self.$parentData) {
+                    setWasSuccessful = Reflect.set(self.$parentData, property, value)
+                }
 
                 // Don't react to data changes for cases like the `x-created` hook.
                 if (self.pauseReactivity) return
@@ -103,8 +110,15 @@ export default class Component {
                     return new Proxy(target[key], proxyHandler)
                 }
 
+                if (! (key in target) && self.$parentData) {
+                    return self.$parentData[key]
+                }
+
                 // If none of the above, just return the flippin' value. Gawsh.
                 return target[key]
+            },
+            has (target, key) {
+                return key in target || (self.$parentData && key in self.$parentData)
             }
         }
 
@@ -118,10 +132,12 @@ export default class Component {
                 // If it's not the current one.
                 if (! el.isSameNode(this.$el)) {
                     // Initialize it if it's not.
-                    if (! el.__x) initializeComponentCallback(el)
+                    if (! el.__x) {
+                        initializeComponentCallback(el)
 
-                    // Now we'll let that sub-component deal with itself.
-                    return false
+                        // Now we'll let that sub-component deal with itself.
+                        return false
+                    }
                 }
             }
 
@@ -136,7 +152,7 @@ export default class Component {
 
             this.initializeElement(el, extraVars)
         }, el => {
-            el.__x = new Component(el)
+            el.__x = new Component(el, this.$data)
         })
 
         // Walk through the $nextTick stack and clear it as we go.
@@ -163,7 +179,7 @@ export default class Component {
 
             this.updateElement(el, extraVars)
         }, el => {
-            el.__x = new Component(el)
+            el.__x = new Component(el, this.$data)
         })
     }
 
@@ -272,7 +288,7 @@ export default class Component {
                         if (node.nodeType !== 1) return
 
                         if (node.matches('[x-data]')) {
-                            node.__x = new Component(node)
+                            node.__x = new Component(node, this.$data)
                             return
                         }
 

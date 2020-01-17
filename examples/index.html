@@ -246,6 +246,24 @@
                 </tr>
 
                 <tr>
+                    <td>Nested components</td>
+                    <td>
+                        <div x-data="{foo: 'bar'}">
+                            <span x-text="foo"></span>
+                            <button @click="foo = 'foo'">Change to 'foo'</button>
+                            <div x-data="{}">
+                                <span x-text="foo"></span>
+                                <button @click="foo = 'baz'">Change to 'baz'</button>
+                                <div id="div3" x-data="{}">
+                                    <span x-text="foo"></span>
+                                    <button @click="foo = 'bob'">Change to 'bob'</button>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
                     <td>Transitions</td>
                     <td>
                         <div x-data="{ open: false }">
