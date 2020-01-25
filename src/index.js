@@ -2,6 +2,16 @@ import Component from './component'
 import { domReady, isTesting } from './utils'
 
 const Alpine = {
+    customDirectives: {},
+
+    directive: function (name, callback) {
+        this.customDirectives[name] = callback
+    },
+
+    getCustomDirective: function (name) {
+        return this.customDirectives[name]
+    },
+
     start: async function () {
         if (! isTesting()) {
             await domReady()

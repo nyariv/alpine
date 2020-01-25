@@ -1,0 +1,32 @@
+<html>
+    <head>
+        <style>
+            .hidden { display: none; }
+            [x-cloak] { display: none; }
+            .opacity-0 { opacity: 0; }
+            .opacity-100 { opacity: 1; }
+            .transition-slow { transition-duration: 300ms; }
+            .transition-medium { transition-duration: 200ms; }
+            .transition-faster { transition-duration: 100ms; }
+            .scale-90 { transform: scale(0.9); }
+            .scale-100 { transform: scale(1); }
+            .ease-in { transition-timing-function: cubic-bezier(0.4, 0, 1, 1); }
+            .ease-out { transition-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+        </style>
+        <script src="/dist/alpine.js"></script>
+        <script>
+            Alpine.directive('toggle', function(el, expression, value, modifiers, initialUpdate) {
+                if (! initialUpdate) return
+                document.addEventListener('click', function() {
+                    this.evaluateCommandExpression(el, `${value} = !${value}`)
+                }.bind(this))
+            })
+        </script>
+    </head>
+    <body>
+        <div x-data="{ foo: 'bar', baz: true }">
+            <span x-text="foo"></span>
+            <span x-text="baz" x-toggle:baz></span>
+        </div>
+    </body>
+</html>

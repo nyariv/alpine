@@ -237,6 +237,9 @@ export default class Component {
                     break;
 
                 default:
+                    if (window['Alpine'] && Alpine.getCustomDirective(type)) {
+                        Alpine.getCustomDirective(type).bind(this)(el, expression, value, modifiers, initialUpdate, extraVars)
+                    }
                     break;
             }
         })
