@@ -115,6 +115,26 @@ export default class Component {
 
                 // If none of the above, just return the flippin' value. Gawsh.
                 return target[key]
+            },
+            deleteProperty(target, key) {
+                if (key in target) {
+                    const deleteWasSuccessful = Reflect.deleteProperty(target, key)
+
+                    if (self.pauseReactivity) return setWasSuccessful
+
+                    debounce(() => {
+                        self.updateElements(self.$el)
+
+                        // Walk through the $nextTick stack and clear it as we go.
+                        while (self.nextTickStack.length > 0) {
+                            self.nextTickStack.shift()()
+                        }
+                    }, 0)()
+
+                    return deleteWasSuccessful
+                }
+
+                return true
             }
         }
 
