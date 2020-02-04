@@ -107,6 +107,9 @@ export default class Component {
                 // If property is a DOM node, just return it. (like in the case of this.$el)
                 if (target[key] && target[key] instanceof Node) return target[key]
 
+                // If property is a Promise, just return it.
+                if (target[key] && Promise.resolve(target[key]) === target[key]) return target[key]
+
                 // If accessing a nested property, return this proxy recursively.
                 // This enables reactivity on setting nested data.
                 if (typeof target[key] === 'object' && target[key] !== null) {
