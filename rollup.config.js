@@ -4,6 +4,7 @@ import {
     terser
 } from "rollup-plugin-terser";
 import resolve from "rollup-plugin-node-resolve"
+import commonjs from 'rollup-plugin-commonjs'
 
 
 export default [{
@@ -35,8 +36,12 @@ export default [{
             file: 'dist/alpine-ie11.js',
             format: 'umd',
             sourcemap: true,
+            globals: {
+                "@babel/runtime/regenerator": "regeneratorRuntime"
+            }
         },
         plugins: [
+            commonjs(),
             resolve(),
             filesize(),
             terser({
@@ -47,6 +52,7 @@ export default [{
             }),
             babel({
                 babelrc: false,
+                runtimeHelpers: true,
                 exclude: 'node_modules/**',
                 presets: [
                     [
@@ -54,17 +60,12 @@ export default [{
                         {
                             targets: {
                                 browsers: "> 0.5%, ie >= 11"
-                            },
-                            modules: false,
-                            spec: true,
-                            useBuiltIns: "usage",
-                            forceAllTransforms: true,
-                            corejs: {
-                                version: 3,
-                                proposals: false
                             }
                         }
                     ]
+                ],
+                plugins: [
+                    ["@babel/transform-runtime"]
                 ]
             })
         ]
