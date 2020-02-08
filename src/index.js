@@ -1,6 +1,17 @@
 import Component from './component'
 import { domReady, isTesting } from './utils'
 
+/* IE11-ONLY:START */
+    // Polyfills
+    import "shim-selected-options"
+    import "proxy-polyfill/proxy.min.js"
+    import "element-closest/browser.js"
+    import "element-remove"
+    import "classlist-polyfill"
+    import "@webcomponents/template"
+    import "custom-event-polyfill"
+/* IE11-ONLY:END */
+
 const Alpine = {
     start: async function () {
         if (! isTesting()) {
