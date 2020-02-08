@@ -1,12 +1,13 @@
-import babel from 'rollup-plugin-babel';
-import filesize from 'rollup-plugin-filesize';
-import { terser } from "rollup-plugin-terser";
+import babel from 'rollup-plugin-babel'
+import filesize from 'rollup-plugin-filesize'
+import { terser } from 'rollup-plugin-terser'
 import resolve from "rollup-plugin-node-resolve"
-import commonjs from 'rollup-plugin-commonjs';
+import commonjs from '@rollup/plugin-commonjs'
+import multi from '@rollup/plugin-multi-entry';
 
 
 export default [{
-    input: 'src/index.js',
+    input: ['src/polyfills.js', 'src/index.js'],
     output: {
         name: 'Alpine',
         file: 'dist/alpine-ie11.js',
@@ -14,6 +15,7 @@ export default [{
         sourcemap: true,
     },
     plugins: [
+        multi(),
         commonjs(),
         resolve(),
         filesize(),
@@ -28,14 +30,14 @@ export default [{
             exclude: 'node_modules/**',
             presets: [
                 [
-                    "@babel/preset-env",
+                    '@babel/preset-env',
                     {
                         targets: {
-                            browsers: "> 0.5%, ie >= 11"
+                            browsers: '> 0.5%, ie >= 11'
                         },
                         modules: false,
                         spec: true,
-                        useBuiltIns: "usage",
+                        useBuiltIns: 'usage',
                         forceAllTransforms: true,
                         corejs: {
                             version: 3,
