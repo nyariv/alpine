@@ -37,10 +37,7 @@ export default [{
             name: 'Alpine',
             file: 'dist/alpine-ie11.js',
             format: 'umd',
-            sourcemap: true,
-            globals: {
-                "@babel/runtime/regenerator": "regeneratorRuntime"
-            }
+            sourcemap: true
         },
         plugins: [
             commonjs(),
