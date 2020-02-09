@@ -7,7 +7,8 @@ export function handleForDirective(component, el, expression, initialUpdate) {
 
     // As we walk the array, we'll also walk the DOM (updating/creating as we go).
     var previousEl = el
-    items.forEach((i, index, group) => {
+    Object.keys(items).forEach((key, index, group) => {
+        const i = items[key]
         const currentKey = getThisIterationsKeyFromTemplateTag(component, el, single, iterator1, iterator2, i, index, group)
         let currentEl = previousEl.nextElementSibling
 
@@ -37,7 +38,11 @@ export function handleForDirective(component, el, expression, initialUpdate) {
             currentEl.__x_for_alias = single
             currentEl.__x_for_value = i
             component.updateElements(currentEl, () => {
-                return {[currentEl.__x_for_alias]: currentEl.__x_for_value}
+                return {
+                    [currentEl.__x_for_alias]: currentEl.__x_for_value,
+                    [iterator1]: key,
+                    [iterator2]: String(index),
+                }
             })
         } else {
             // There are no more .__x_for_key elements, meaning the page is first loading, OR, there are
@@ -61,7 +66,11 @@ export function handleForDirective(component, el, expression, initialUpdate) {
             currentEl.__x_for_alias = single
             currentEl.__x_for_value = i
             component.initializeElements(currentEl, () => {
-                return {[currentEl.__x_for_alias]: currentEl.__x_for_value}
+                return {
+                    [currentEl.__x_for_alias]: currentEl.__x_for_value,
+                    [iterator1]: key,
+                    [iterator2]: String(index),
+                }
             })
         }
 
