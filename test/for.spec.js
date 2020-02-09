@@ -29,6 +29,75 @@ test('x-for', async () => {
     expect(document.querySelectorAll('span')[1].innerText).toEqual('bar')
 })
 
+test('x-for with objects', async () => {
+    document.body.innerHTML = `
+        <div x-data="{ items: {prop: 'foo', prop2: 'bar'} }">
+            <button x-on:click="items.prop = 'baz'"></button>
+
+            <template x-for="item in items">
+                <span x-text="item"></span>
+            </template>
+        </div>
+    `
+
+    Alpine.start()
+
+    expect(document.querySelectorAll('span').length).toEqual(2)
+    expect(document.querySelectorAll('span')[0].innerText).toEqual('foo')
+    expect(document.querySelectorAll('span')[1].innerText).toEqual('bar')
+
+    document.querySelector('button').click()
+
+    await wait(() => { expect(document.querySelectorAll('span').length).toEqual(2) })
+
+    expect(document.querySelectorAll('span')[0].innerText).toEqual('baz')
+})
+
+test('can print indexes in x-for', async () => {
+    document.body.innerHTML = `
+        <div x-data="{ items: ['foo', 'bar'] }">
+            <template x-for="(item, index) in items">
+                <div>
+                    <span x-text="item"></span>
+                    <span x-text="index"></span>
+                </div>
+            </template>
+        </div>
+    `
+
+    Alpine.start()
+
+    expect(document.querySelectorAll('span').length).toEqual(4)
+    expect(document.querySelectorAll('span')[0].innerText).toEqual('foo')
+    expect(document.querySelectorAll('span')[1].innerText).toEqual('0')
+    expect(document.querySelectorAll('span')[2].innerText).toEqual('bar')
+    expect(document.querySelectorAll('span')[3].innerText).toEqual('1')
+})
+
+test('can print indexes and keys in x-for', async () => {
+    document.body.innerHTML = `
+        <div x-data="{ items: {prop: 'foo', prop2: 'bar'} }">
+            <template x-for="(item, key, index) in items">
+                <div>
+                    <span x-text="item"></span>
+                    <span x-text="key"></span>
+                    <span x-text="index"></span>
+                </div>
+            </template>
+        </div>
+    `
+
+    Alpine.start()
+
+    expect(document.querySelectorAll('span').length).toEqual(6)
+    expect(document.querySelectorAll('span')[0].innerText).toEqual('foo')
+    expect(document.querySelectorAll('span')[1].innerText).toEqual('prop')
+    expect(document.querySelectorAll('span')[2].innerText).toEqual('0')
+    expect(document.querySelectorAll('span')[3].innerText).toEqual('bar')
+    expect(document.querySelectorAll('span')[4].innerText).toEqual('prop2')
+    expect(document.querySelectorAll('span')[5].innerText).toEqual('1')
+})
+
 test('removes all elements when array is empty and previously had one item', async () => {
     document.body.innerHTML = `
         <div x-data="{ items: ['foo'] }">
