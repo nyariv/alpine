@@ -3,7 +3,6 @@ import filesize from 'rollup-plugin-filesize';
 import { terser } from "rollup-plugin-terser";
 import resolve from "rollup-plugin-node-resolve"
 import commonjs from '@rollup/plugin-commonjs'
-import multi from '@rollup/plugin-multi-entry';
 
 export default {
     input: ['src/index.js'],
@@ -14,9 +13,8 @@ export default {
         sourcemap: true,
     },
     plugins: [
-        multi(),
-        commonjs(),
         resolve(),
+        commonjs(),
         filesize(),
         terser({
             mangle: false,
@@ -27,6 +25,7 @@ export default {
         babel({
             babelrc: false,
             exclude: 'node_modules/**',
+            runtimeHelpers: true,
             presets: [
                 [
                     "@babel/preset-env",
@@ -36,14 +35,12 @@ export default {
                         },
                         modules: false,
                         spec: true,
-                        useBuiltIns: "usage",
                         forceAllTransforms: true,
-                        corejs: {
-                            version: 3,
-                            proposals: false
-                        }
                     }
                 ]
+            ],
+            plugins: [
+                "@babel/plugin-transform-runtime"
             ]
         })
     ]
