@@ -372,9 +372,12 @@ export function deepProxy(target, proxyHandler) {
     // If target is already an Alpine proxy, return it.
     if (target['$isAlpineProxy']) return target;
 
+    // If target is a Promise, return it.
+    if (target instanceof Promise) return target;
+
     // Otherwise proxy the properties recursively.
     // This enables reactivity on setting nested data.
-    // Note that if a project is not a valid object, it won't be converted to a proxy
+    // Note that if a property is not a valid object, it won't be converted to a proxy
     for (let property in target) {
         target[property] = deepProxy(target[property], proxyHandler)
     }
