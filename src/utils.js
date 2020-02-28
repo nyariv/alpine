@@ -397,3 +397,9 @@ export function deepProxy(target, proxyHandler, functionHandler) {
 function isNumeric(subject){
     return ! isNaN(subject)
 }
+
+function getMethods(obj) {
+    let properties = new Set()
+    Object.getOwnPropertyNames(obj).map(item => properties.add(item))
+    return [...properties.keys()].filter(item => typeof obj[item] === 'function')
+}
