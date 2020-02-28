@@ -371,9 +371,6 @@ export function deepProxy(target, proxyHandler, functionHandler) {
     // If target is a DOM node (like in the case of this.$el), return it.
     if (target instanceof Node) return target
 
-    // escaping RegExp from Proxy
-    if (target instanceof RegExp) return target
-    
     // If target is already an Alpine proxy, return it.
     if (target['$isAlpineProxy']) return target;
 
@@ -384,9 +381,9 @@ export function deepProxy(target, proxyHandler, functionHandler) {
         target[property] = deepProxy(target[property], proxyHandler, functionHandler)
     }
 
-    // Loop on each function and wrap them in a proxy.
+    // Wrap each method in a proxy.
     // In this way, we can bind them to the original context so native objects
-    // such as Dates, Regexp, etc won't and, also, we can trigger a refresh
+    // such as Dates, Regexp, etc won't break and, also, we can trigger a refresh
     // so methods like Date.setSeconds are reactive.
     // We skip primitive Objects and Arrays since we want to use the Alpine context for them.
     const proto = Object.getPrototypeOf(target)
