@@ -40,18 +40,20 @@ export default class Component {
         this.showDirectiveStack = []
         this.showDirectiveLastElement
 
+        // We want to allow data manipulation, but not trigger DOM updates just yet.
+        // We haven't even initialized the elements with their Alpine bindings. I mean c'mon.
+        this.pauseReactivity = true
+
         var initReturnedCallback
         // If x-init is present AND we aren't cloning (skip x-init on clone)
         if (initExpression && ! seedDataForCloning) {
-            // We want to allow data manipulation, but not trigger DOM updates just yet.
-            // We haven't even initialized the elements with their Alpine bindings. I mean c'mon.
-            this.pauseReactivity = true
             initReturnedCallback = this.evaluateReturnExpression(this.$el, initExpression)
-            this.pauseReactivity = false
         }
 
         // Register all our listeners and set all our attribute bindings.
         this.initializeElements(this.$el)
+
+        this.pauseReactivity = false
 
         // Use mutation observer to detect new elements being added within this component at run-time.
         // Alpine's just so darn flexible amirite?
@@ -79,11 +81,36 @@ export default class Component {
     wrapDataInObservable(data) {
         var self = this
 
+        const functionHandler = (target) => ({
+            apply: function(callback, thisArg, argumentsList) {
+                const returnValue = Reflect.apply(callback, target, argumentsList)
+
+                if (self.pauseReactivity) return returnValue
+
+                // we pause the reactivity since we don't want to keep refreshing
+                // in case of one of the functions outputs a string.
+                self.pauseReactivity = true
+
+                debounce(() => {
+                    self.updateElements(self.$el)
+
+                    // Walk through the $nextTick stack and clear it as we go.
+                    while (self.nextTickStack.length > 0) {
+                        self.nextTickStack.shift()()
+                    }
+
+                    self.pauseReactivity = false
+                }, 0)()
+
+                return returnValue
+            }
+        })
+
         const proxyHandler = {
             set(obj, property, value) {
                 // Set the value converting it to a "Deep Proxy" when required
                 // Note that if a project is not a valid object, it won't be converted to a proxy
-                const setWasSuccessful = Reflect.set(obj, property, deepProxy(value, proxyHandler))
+                const setWasSuccessful = Reflect.set(obj, property, deepProxy(value, proxyHandler, functionHandler))
 
                 // Don't react to data changes for cases like the `x-created` hook.
                 if (self.pauseReactivity) return setWasSuccessful
@@ -108,7 +135,7 @@ export default class Component {
             }
         }
 
-        return deepProxy(data, proxyHandler)
+        return deepProxy(data, proxyHandler, functionHandler)
     }
 
     walkAndSkipNestedComponents(el, callback, initializeComponentCallback = () => {}) {

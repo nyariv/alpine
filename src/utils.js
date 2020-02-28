@@ -359,7 +359,7 @@ export function transition(el, stages) {
     });
 }
 
-export function deepProxy(target, proxyHandler) {
+export function deepProxy(target, proxyHandler, functionHandler) {
     // If target is null, return it.
     if (target === null) return target;
 
@@ -376,7 +376,19 @@ export function deepProxy(target, proxyHandler) {
     // This enables reactivity on setting nested data.
     // Note that if a project is not a valid object, it won't be converted to a proxy
     for (let property in target) {
-        target[property] = deepProxy(target[property], proxyHandler)
+        target[property] = deepProxy(target[property], proxyHandler, functionHandler)
+    }
+
+    // Loop on each function and wrap them in a proxy.
+    // In this way, we can bind them to the original context so native objects
+    // such as Dates, Regexp, etc won't and, also, we can trigger a refresh
+    // so methods like Date.setSeconds are reactive.
+    // We skip primitive Objects and Arrays since we want to use the Alpine context for them.
+    const proto = Object.getPrototypeOf(target)
+    if (proto !== Object.prototype && proto !== Array.prototype) {
+        Object.getOwnPropertyNames(Object.getPrototypeOf(target)).filter(item => {
+            target[item] = new Proxy(target[item], functionHandler(target))
+        })
     }
 
     return new Proxy(target, proxyHandler)
@@ -384,4 +396,10 @@ export function deepProxy(target, proxyHandler) {
 
 function isNumeric(subject){
     return ! isNaN(subject)
+}
+
+function getMethods(obj) {
+    let properties = new Set()
+    Object.getOwnPropertyNames(obj).map(item => properties.add(item))
+    return [...properties.keys()].filter(item => typeof obj[item] === 'function')
 }
