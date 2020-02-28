@@ -339,7 +339,9 @@ export function transition(el, stages) {
     stages.during()
 
     requestAnimationFrame(() => {
-        const duration = Number(getComputedStyle(el).transitionDuration.replace('s', '')) * 1000
+        // Note: Safari's transitionDuration property will list out comma seperated transition durations
+        // for every single transition property. Let's grab the first one and call it a day.
+        let duration = Number(getComputedStyle(el).transitionDuration.replace(/,.*/, '').replace('s', '')) * 1000
 
         stages.show()
 
@@ -369,6 +371,9 @@ export function deepProxy(target, proxyHandler, functionHandler) {
     // If target is a DOM node (like in the case of this.$el), return it.
     if (target instanceof Node) return target
 
+    // escaping RegExp from Proxy
+    if (target instanceof RegExp) return target
+    
     // If target is already an Alpine proxy, return it.
     if (target['$isAlpineProxy']) return target;
 

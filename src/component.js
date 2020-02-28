@@ -129,7 +129,7 @@ export default class Component {
             get(target, key) {
                 // Provide a way to determine if this object is an Alpine proxy or not.
                 if (key === "$isAlpineProxy") return true
-
+                
                 // Just return the flippin' value. Gawsh.
                 return target[key]
             }
