@@ -381,13 +381,11 @@ export function deepProxy(target, proxyHandler, functionHandler) {
         target[property] = deepProxy(target[property], proxyHandler, functionHandler)
     }
 
-    // Wrap each method in a proxy.
+    // Wrap each prototype method in a proxy object.
     // In this way, we can bind them to the original context so native objects
     // such as Dates, Regexp, etc won't break and, also, we can trigger a refresh
     // so methods like Date.setSeconds are reactive.
-    // We skip primitive Objects and Arrays since we want to use the Alpine context for them.
-    const proto = Object.getPrototypeOf(target)
-    if (proto !== Object.prototype && proto !== Array.prototype) {
+    if (Object.getPrototypeOf(target) !== Array.prototype) {
         Object.getOwnPropertyNames(Object.getPrototypeOf(target)).filter(item => typeof target[item] === 'function').forEach(item => {
             target[item] = new Proxy(target[item], functionHandler(target))
         })
@@ -398,10 +396,4 @@ export function deepProxy(target, proxyHandler, functionHandler) {
 
 function isNumeric(subject){
     return ! isNaN(subject)
-}
-
-function getMethods(obj) {
-    let properties = new Set()
-    Object.getOwnPropertyNames(obj).map(item => properties.add(item))
-    return [...properties.keys()].filter(item => typeof obj[item] === 'function')
 }
