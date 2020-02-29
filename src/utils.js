@@ -385,8 +385,9 @@ export function deepProxy(target, proxyHandler, functionHandler) {
     // In this way, we can bind them to the original context so native objects
     // such as Dates, Regexp, etc won't break and, also, we can trigger a refresh
     // so methods like Date.setSeconds are reactive.
+    // Note, We skip arrays since they are already bound to the right context.
     if (Object.getPrototypeOf(target) !== Array.prototype) {
-        Object.getOwnPropertyNames(Object.getPrototypeOf(target)).filter(item => typeof target[item] === 'function').forEach(item => {
+        getPrototypeMethods(target).forEach(item => {
             target[item] = new Proxy(target[item], functionHandler(target))
         })
     }
@@ -396,4 +397,15 @@ export function deepProxy(target, proxyHandler, functionHandler) {
 
 function isNumeric(subject){
     return ! isNaN(subject)
+}
+
+function getPrototypeMethods(obj) {
+    let methods = new Set()
+    let currentObj = Object.getPrototypeOf(obj)
+    do {
+        Object.getOwnPropertyNames(currentObj)
+            .filter(item => typeof obj[item] === 'function')
+            .map(item => methods.add(item))
+    } while ((currentObj = Object.getPrototypeOf(currentObj)))
+    return methods
 }
