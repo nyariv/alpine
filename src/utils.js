@@ -209,7 +209,7 @@ export function transitionHelperOut(el, modifiers, settingBothSidesOfTransition,
 }
 
 function modifierValue(modifiers, key, fallback) {
-    // If the the modifier isn't present, use the default.
+    // If the modifier isn't present, use the default.
     if (modifiers.indexOf(key) === -1) return fallback
 
     // If it IS present, grab the value after it: x-show.transition.duration.500ms
@@ -339,7 +339,7 @@ export function transition(el, stages) {
     stages.during()
 
     requestAnimationFrame(() => {
-        // Note: Safari's transitionDuration property will list out comma seperated transition durations
+        // Note: Safari's transitionDuration property will list out comma separated transition durations
         // for every single transition property. Let's grab the first one and call it a day.
         let duration = Number(getComputedStyle(el).transitionDuration.replace(/,.*/, '').replace('s', '')) * 1000
 
@@ -396,10 +396,4 @@ export function deepProxy(target, proxyHandler, functionHandler) {
 
 function isNumeric(subject){
     return ! isNaN(subject)
-}
-
-function getMethods(obj) {
-    let properties = new Set()
-    Object.getOwnPropertyNames(obj).map(item => properties.add(item))
-    return [...properties.keys()].filter(item => typeof obj[item] === 'function')
 }
