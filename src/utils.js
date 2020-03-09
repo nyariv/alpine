@@ -42,6 +42,16 @@ export function walk(el, callback) {
 
         node = node.nextElementSibling
     }
+
+    if (el.shadowRoot) {
+        node = el.shadowRoot.firstElementChild
+
+        while (node) {
+            walk(node, callback)
+
+            node = node.nextElementSibling
+        }
+    }
 }
 
 export function debounce(func, wait) {

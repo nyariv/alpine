@@ -89,6 +89,15 @@
       walk(node, callback);
       node = node.nextElementSibling;
     }
+
+    if (el.shadowRoot) {
+      node = el.shadowRoot.firstElementChild;
+
+      while (node) {
+        walk(node, callback);
+        node = node.nextElementSibling;
+      }
+    }
   }
   function debounce(func, wait) {
     var timeout;
