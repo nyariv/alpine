@@ -3,7 +3,7 @@
  * Most of the code is a direct porting of part of that library plus some necessary changes
  * to make it compatible with old browsers and remove any code that is not usefull for Alpine JS.
  */
-export class ObservableMembrane {
+export class SimpleObservableMembrane {
     constructor(options = null) {
         if (options !== null) {
             const { valueMutated, valueObserved } = options;
@@ -78,34 +78,5 @@ export class ObservableMembrane {
             return false
         }
         return true
-    }
-
-    proxyHandler(membrane, originalTarget) {
-        return {
-            get(shadowTarget, key) {
-                const value = originalTarget[key]
-                membrane.valueObserved(originalTarget, key)
-                if(!Array.isArray(originalTarget)
-                    && typeof value === 'function'
-                    && !originalTarget.hasOwnProperty(key)) {
-                    return value.bind(originalTarget)
-                }
-                return membrane.getProxy(value)
-            },
-            set(shadowTarget, key, value) {
-                const oldValue = originalTarget[key]
-                if (oldValue !== value) {
-                    originalTarget[key] = value
-                    membrane.valueMutated(originalTarget, key)
-                } else if (key === 'length' && Array.isArray(originalTarget)) {
-                    // push will add the new index, and by the time length
-                    // is updated, the internal length is already equal to the new length value
-                    // therefore, the oldValue is equal to the value. This is the forking logic
-                    // to support this use case.
-                    membrane.valueMutated(originalTarget, key)
-                }
-                return true
-            }
-        }
     }
 }

@@ -6359,13 +6359,18 @@
     }
   }
 
-  var ObservableMembrane =
+  /**
+   * This class is deeply inspired by https://github.com/salesforce/observable-membrane
+   * Most of the code is a direct porting of part of that library plus some necessary changes
+   * to make it compatible with old browsers and remove any code that is not usefull for Alpine JS.
+   */
+  var SimpleObservableMembrane =
   /*#__PURE__*/
   function () {
-    function ObservableMembrane() {
+    function SimpleObservableMembrane() {
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
 
-      _classCallCheck(this, ObservableMembrane);
+      _classCallCheck(this, SimpleObservableMembrane);
 
       if (options !== null) {
         var valueMutated = options.valueMutated,
@@ -6377,7 +6382,7 @@
       }
     }
 
-    _createClass(ObservableMembrane, [{
+    _createClass(SimpleObservableMembrane, [{
       key: "defaultValueObserved",
       value: function defaultValueObserved(target, key) {}
     }, {
@@ -6458,41 +6463,9 @@
 
         return true;
       }
-    }, {
-      key: "proxyHandler",
-      value: function proxyHandler(membrane, originalTarget) {
-        return {
-          get: function get(shadowTarget, key) {
-            var value = originalTarget[key];
-            membrane.valueObserved(originalTarget, key);
-
-            if (!Array.isArray(originalTarget) && typeof value === 'function' && !originalTarget.hasOwnProperty(key)) {
-              return value.bind(originalTarget);
-            }
-
-            return membrane.getProxy(value);
-          },
-          set: function set(shadowTarget, key, value) {
-            var oldValue = originalTarget[key];
-
-            if (oldValue !== value) {
-              originalTarget[key] = value;
-              membrane.valueMutated(originalTarget, key);
-            } else if (key === 'length' && Array.isArray(originalTarget)) {
-              // push will add the new index, and by the time length
-              // is updated, the internal length is already equal to the new length value
-              // therefore, the oldValue is equal to the value. This is the forking logic
-              // to support this use case.
-              membrane.valueMutated(originalTarget, key);
-            }
-
-            return true;
-          }
-        };
-      }
     }]);
 
-    return ObservableMembrane;
+    return SimpleObservableMembrane;
   }();
 
   var Component =
@@ -6595,7 +6568,7 @@
         var updateDom = debounce(function () {
           self.updateElements(self.$el);
         }, 0);
-        var membrane = new ObservableMembrane({
+        var membrane = new SimpleObservableMembrane({
           valueMutated: function valueMutated(target, key) {
             var _this3 = this;
 
@@ -6628,8 +6601,6 @@
                   var _this5 = this;
 
                   _newArrowCheck(this, _this4);
-
-                  console.log(target, this.unwrapProxy(comparisonData));
 
                   if (Object.is(target, this.unwrapProxy(comparisonData))) {
                     // Run the watchers.

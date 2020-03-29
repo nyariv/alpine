@@ -5,7 +5,7 @@ import { handleShowDirective } from './directives/show'
 import { handleIfDirective } from './directives/if'
 import { registerModelListener } from './directives/model'
 import { registerListener } from './directives/on'
-import { ObservableMembrane } from './membrane'
+import { SimpleObservableMembrane } from './membrane'
 
 export default class Component {
     constructor(el, seedDataForCloning = null) {
@@ -95,7 +95,7 @@ export default class Component {
             self.updateElements(self.$el)
         }, 0)
 
-        let membrane = new ObservableMembrane({
+        let membrane = new SimpleObservableMembrane({
             valueMutated(target, key) {
                 if (self.watchers[key]) {
                     // If there's a watcher for this specific key, run it.
