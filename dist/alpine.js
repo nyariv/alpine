@@ -904,9 +904,9 @@
       return {
         get(shadowTarget, key) {
           const value = originalTarget[key];
-          membrane.valueObserved(originalTarget, key);
+          membrane.valueObserved(originalTarget, key); // This should be improved
 
-          if (!Array.isArray(originalTarget) && typeof value === 'function' && !originalTarget.hasOwnProperty(key)) {
+          if (typeof value === 'function' && Object.getPrototypeOf(originalTarget) !== Object.prototype) {
             return value.bind(originalTarget);
           }
 
@@ -935,10 +935,6 @@
 
     valueIsObservable(value) {
       if (value === null) {
-        return false;
-      }
-
-      if (typeof value === 'function') {
         return false;
       }
 

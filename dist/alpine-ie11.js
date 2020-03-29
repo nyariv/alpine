@@ -5987,6 +5987,16 @@
   addToUnscopables('values');
   addToUnscopables('entries');
 
+  var FAILS_ON_PRIMITIVES$1 = fails(function () { objectGetPrototypeOf(1); });
+
+  // `Object.getPrototypeOf` method
+  // https://tc39.github.io/ecma262/#sec-object.getprototypeof
+  _export({ target: 'Object', stat: true, forced: FAILS_ON_PRIMITIVES$1, sham: !correctPrototypeGetter }, {
+    getPrototypeOf: function getPrototypeOf(it) {
+      return objectGetPrototypeOf(toObject(it));
+    }
+  });
+
   var freezing = !fails(function () {
     return Object.isExtensible(Object.preventExtensions({}));
   });
@@ -6420,9 +6430,9 @@
         return {
           get: function get(shadowTarget, key) {
             var value = originalTarget[key];
-            membrane.valueObserved(originalTarget, key);
+            membrane.valueObserved(originalTarget, key); // This should be improved
 
-            if (!Array.isArray(originalTarget) && typeof value === 'function' && !originalTarget.hasOwnProperty(key)) {
+            if (typeof value === 'function' && Object.getPrototypeOf(originalTarget) !== Object.prototype) {
               return value.bind(originalTarget);
             }
 
@@ -6450,10 +6460,6 @@
       key: "valueIsObservable",
       value: function valueIsObservable(value) {
         if (value === null) {
-          return false;
-        }
-
-        if (typeof value === 'function') {
           return false;
         }
 

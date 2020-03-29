@@ -43,9 +43,8 @@ export class SimpleObservableMembrane {
             get(shadowTarget, key) {
                 const value = originalTarget[key]
                 membrane.valueObserved(originalTarget, key)
-                if(!Array.isArray(originalTarget)
-                    && typeof value === 'function'
-                    && !originalTarget.hasOwnProperty(key)) {
+                // This should be improved
+                if(typeof value === 'function' && Object.getPrototypeOf(originalTarget) !== Object.prototype) {
                     return value.bind(originalTarget)
                 }
                 return membrane.getProxy(value)
@@ -69,9 +68,6 @@ export class SimpleObservableMembrane {
 
     valueIsObservable(value) {
         if (value === null) {
-            return false
-        }
-        if (typeof value === 'function') {
             return false
         }
         if (typeof value !== 'object') {
