@@ -6432,7 +6432,9 @@
             var value = originalTarget[key];
             membrane.valueObserved(originalTarget, key); // This should be improved
 
-            if (typeof value === 'function' && Object.getPrototypeOf(originalTarget) !== Object.prototype) {
+            var proto = Object.getPrototypeOf(originalTarget);
+
+            if (typeof value === 'function' && proto !== Object.prototype && proto !== Array.prototype) {
               return value.bind(originalTarget);
             }
 
