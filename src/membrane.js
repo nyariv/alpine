@@ -5,6 +5,7 @@ export class ObservableMembrane {
             this.valueMutated = options['valueMutated'] ? options['valueMutated'] : this.defaultValueMutated;
             this.valueObserved = options['valueObserved'] ? options['valueObserved'] : this.defaultValueObserved;
             this.proxies = new WeakMap()
+            this.reverseProxies = new WeakMap()
         }
     }
 
@@ -22,13 +23,14 @@ export class ObservableMembrane {
             const reactiveHandler = this.proxyHandler(this, value);
             proxy = new Proxy(value, reactiveHandler);
             this.proxies.set(value, proxy);
+            this.reverseProxies.set(proxy, value);
             return proxy
         }
         return value;
     }
 
     unwrapProxy(value) {
-        return this.proxies.get(value) || value
+        return this.reverseProxies.get(value) || value
     }
 
     proxyHandler(membrane, originalTarget) {

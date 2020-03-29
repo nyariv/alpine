@@ -115,7 +115,7 @@ export default class Component {
                             // Now, walk through the dot-notation "parts" recursively to find
                             // a match, and call the watcher if one's found.
                             dotNotationParts.reduce((comparisonData, part) => {
-                                if (Object.is(target, comparisonData)) {
+                                if (Object.is(target, this.unwrapProxy(comparisonData))) {
                                     // Run the watchers.
                                     self.watchers[fullDotNotationKey].forEach(callback => callback(target[key]))
                                 }
