@@ -1,3 +1,8 @@
+/**
+ * This class is deeply inspired by https://github.com/salesforce/observable-membrane
+ * Most of the code is a direct porting of part of that library plus some necessary changes
+ * to make it compatible with old browsers and remove any code that is not usefull for Alpine JS.
+ */
 export class ObservableMembrane {
     constructor(options = null) {
         if (options !== null) {
