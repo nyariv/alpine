@@ -1,4 +1,9 @@
-# Alpine.js
+# Disclaimer
+This library is a opinionated for of [Alpine Js by Caleb Porzio](https://github.com/alpinejs/alpine)
+ALthough I'll try to keep it consisten as much as possible, please be aware that there might be some different beaviors due to internal bugs, design choices or delaing in pulling/adapting the latest features.
+The library does not use the Salesforce membrane but it use an internal stripped-down implementation to allow Alpine to be compatible with IE11.
+
+# Alpine.js - Blue
 
 ![npm bundle size](https://img.shields.io/bundlephobia/minzip/alpinejs)
 
@@ -16,24 +21,14 @@ Think of it like [Tailwind](https://tailwindcss.com/) for JavaScript.
 
 **From CDN:** Add the following script to the end of your `<head>` section.
 ```html
-<script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.js" defer></script>
+<script src="https://cdn.jsdelivr.net/gh/SimoTod/alpine@master/dist/alpine.js" defer></script>
 ```
 
 That's it. It will initialize itself.
 
-**From NPM:** Install the package from NPM.
-```js
-npm i alpinejs
-```
-
-Include it in your script.
-```js
-import 'alpinejs'
-```
-
 **For IE11 support** Use the following script instead.
 ```html
-<script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine-ie11.js" defer></script>
+<script src="https://cdn.jsdelivr.net/gh/SimoTod/alpine@v2.x.x/dist/alpine-ie11.js" defer></script>
 ```
 
 ## Use
