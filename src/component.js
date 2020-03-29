@@ -5,7 +5,7 @@ import { handleShowDirective } from './directives/show'
 import { handleIfDirective } from './directives/if'
 import { registerModelListener } from './directives/model'
 import { registerListener } from './directives/on'
-import ObservableMembrane from 'observable-membrane'
+import { ObservableMembrane } from './membrane'
 
 export default class Component {
     constructor(el, seedDataForCloning = null) {
