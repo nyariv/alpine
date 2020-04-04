@@ -417,8 +417,9 @@
 
 
     var previousEl = el;
-    items.forEach((i, index, group) => {
-      const currentKey = getThisIterationsKeyFromTemplateTag(component, el, single, iterator1, iterator2, i, index, group);
+    Object.keys(items).forEach((i, index) => {
+      const item = items[i];
+      const currentKey = getThisIterationsKeyFromTemplateTag(component, el, single, iterator1, iterator2, item, i, index);
       let currentEl = previousEl.nextElementSibling; // Let's check and see if the x-for has already generated an element last time it ran.
 
       if (currentEl && currentEl.__x_for_key !== undefined) {
@@ -444,9 +445,9 @@
 
         delete currentEl.__x_for_key;
         let xForVars = {};
-        xForVars[single] = i;
-        if (iterator1) xForVars[iterator1] = index;
-        if (iterator2) xForVars[iterator2] = group;
+        xForVars[single] = item;
+        if (iterator1) xForVars[iterator1] = i;
+        if (iterator2) xForVars[iterator2] = items;
         currentEl.__x_for = xForVars;
         component.updateElements(currentEl, () => {
           return currentEl.__x_for;
@@ -468,9 +469,9 @@
         // always up to date for listener handlers that don't get re-registered.
 
         let xForVars = {};
-        xForVars[single] = i;
-        if (iterator1) xForVars[iterator1] = index;
-        if (iterator2) xForVars[iterator2] = group;
+        xForVars[single] = item;
+        if (iterator1) xForVars[iterator1] = i;
+        if (iterator2) xForVars[iterator2] = items;
         currentEl.__x_for = xForVars;
         component.initializeElements(currentEl, () => {
           return currentEl.__x_for;
@@ -519,13 +520,13 @@
     return res;
   }
 
-  function getThisIterationsKeyFromTemplateTag(component, el, single, iterator1, iterator2, i, index, group) {
+  function getThisIterationsKeyFromTemplateTag(component, el, single, iterator1, iterator2, item, name, index) {
     const keyAttr = getXAttrs(el, 'bind').filter(attr => attr.value === 'key')[0];
     let keyAliases = {
-      [single]: i
+      [single]: item
     };
-    if (iterator1) keyAliases[iterator1] = index;
-    if (iterator2) keyAliases[iterator2] = group;
+    if (iterator1) keyAliases[iterator1] = name;
+    if (iterator2) keyAliases[iterator2] = index;
     return keyAttr ? component.evaluateReturnExpression(el, keyAttr.expression, () => keyAliases) : index;
   }
 
