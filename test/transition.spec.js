@@ -71,7 +71,7 @@ test('transition in', async () => {
             expect(document.querySelector('span').classList.contains('enter-end')).toEqual(false)
             expect(document.querySelector('span').getAttribute('style')).toEqual(null)
             resolve();
-        }, 10)
+        }, 11)
     )
 })
 
@@ -141,7 +141,7 @@ test('transition out', async () => {
             expect(document.querySelector('span').classList.contains('leave-end')).toEqual(false)
             expect(document.querySelector('span').getAttribute('style')).toEqual('display: none;')
             resolve();
-        }, 10)
+        }, 11)
     )
 })
 
@@ -199,7 +199,7 @@ test('original class attribute classes are preserved after transition finishes',
             expect(document.querySelector('span').classList.contains('enter')).toEqual(true)
             expect(document.querySelector('span').getAttribute('style')).toEqual(null)
             resolve();
-        }, 10)
+        }, 11)
     )
 })
 

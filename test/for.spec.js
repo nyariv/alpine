@@ -210,7 +210,7 @@ test('can use index inside of loop', async () => {
     Alpine.start()
 
     expect(document.querySelector('h1').innerText).toEqual(0)
-    expect(document.querySelector('h2').innerText).toEqual(0)
+    expect(document.querySelector('h2').innerText).toEqual("0")
 })
 
 test('can use third iterator param (collection) inside of loop', async () => {
@@ -318,4 +318,58 @@ test('nested x-for', async () => {
     expect(document.querySelectorAll('h2')[0].innerText).toEqual('bob')
     expect(document.querySelectorAll('h2')[1].innerText).toEqual('lob')
     expect(document.querySelectorAll('h2')[2].innerText).toEqual('law')
+})
+
+test('can inside on objects', async () => {
+    document.body.innerHTML = `
+        <div x-data="{ obj: {p1: 'foo'} }">
+            <button x-on:click="obj = {p1: 'bar', p2: 'baz'}"></button>
+
+            <template x-for="prop in obj">
+                <span x-text="prop"></span>
+            </template>
+        </div>
+    `
+
+    Alpine.start()
+
+    expect(document.querySelectorAll('span').length).toEqual(1)
+    expect(document.querySelectorAll('span')[0].innerText).toEqual('foo')
+
+    document.querySelector('button').click()
+
+    await wait(() => { expect(document.querySelectorAll('span').length).toEqual(2) })
+
+    expect(document.querySelectorAll('span')[0].innerText).toEqual('bar')
+    expect(document.querySelectorAll('span')[1].innerText).toEqual('baz')
+})
+
+test('can use name inside of object loop', async () => {
+    document.body.innerHTML = `
+        <div x-data="{ obj: {p1: 'foo'} }">
+            <button x-on:click="obj = {p1: 'bar', p2: 'baz'}"></button>
+
+            <template x-for="(prop, name) in obj">
+                <div>
+                    <span x-text="prop"></span>
+                    <span x-text="name"></span>
+                </div>
+            </template>
+        </div>
+    `
+
+    Alpine.start()
+
+    expect(document.querySelectorAll('span').length).toEqual(2)
+    expect(document.querySelectorAll('span')[0].innerText).toEqual('foo')
+    expect(document.querySelectorAll('span')[1].innerText).toEqual('p1')
+
+    document.querySelector('button').click()
+
+    await wait(() => { expect(document.querySelectorAll('span').length).toEqual(4) })
+
+    expect(document.querySelectorAll('span')[0].innerText).toEqual('bar')
+    expect(document.querySelectorAll('span')[1].innerText).toEqual('p1')
+    expect(document.querySelectorAll('span')[2].innerText).toEqual('baz')
+    expect(document.querySelectorAll('span')[3].innerText).toEqual('p2')
 })
