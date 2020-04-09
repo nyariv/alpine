@@ -1,3 +1,4 @@
+import Sandbox from '@nyariv/sandboxjs'
 
 // Thanks @stimulus:
 // https://github.com/stimulusjs/stimulus/blob/master/packages/%40stimulus/core/src/application.ts
@@ -58,27 +59,25 @@ export function debounce(func, wait) {
 }
 
 export function saferEval(expression, dataContext, additionalHelperVariables = {}) {
-    return (new Function(['$data', ...Object.keys(additionalHelperVariables)], `var result; with($data) { result = ${expression} }; return result`))(
-        dataContext, ...Object.values(additionalHelperVariables)
-    )
+    const code = `return ${expression};`;
+    const sandbox = new Sandbox(Sandbox.SAFE_GLOBALS, Sandbox.SAFE_PROTOTYPES);
+    const exec = sandbox.compile(code);
+    return exec(dataContext, additionalHelperVariables);
 }
 
 export function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}) {
     // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
     if (Object.keys(dataContext).includes(expression)) {
-        let methodReference = (new Function(['dataContext', ...Object.keys(additionalHelperVariables)], `with(dataContext) { return ${expression} }`))(
-            dataContext, ...Object.values(additionalHelperVariables)
-        )
-
         if (typeof methodReference === 'function') {
-            return methodReference.call(dataContext, additionalHelperVariables['$event'])
+            return dataContext[expression].call(dataContext, additionalHelperVariables['$event'])
         }
     }
 
-    return (new Function(['dataContext', ...Object.keys(additionalHelperVariables)], `with(dataContext) { ${expression} }`))(
-        dataContext, ...Object.values(additionalHelperVariables)
-    )
+    const code = `${expression}`;
+    const sandbox = new Sandbox(Sandbox.SAFE_GLOBALS, Sandbox.SAFE_PROTOTYPES);
+    const exec = sandbox.compile(code);
+    return exec(dataContext, additionalHelperVariables);
 }
 
 const xAttrRE = /^x-(on|bind|data|text|html|model|if|for|show|cloak|transition|ref)\b/
