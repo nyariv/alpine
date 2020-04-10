@@ -6059,7 +6059,6 @@
   }
   function saferEval(expression, dataContext) {
     var additionalHelperVariables = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-    //console.log(expression, dataContext, additionalHelperVariables)
     var code = "return ".concat(expression, ";");
     var allowedGlobals = Sandbox.SAFE_GLOBALS;
     var allowedPrototypes = Sandbox.SAFE_PROTOTYPES;
@@ -6072,7 +6071,6 @@
   function saferEvalNoReturn(expression, dataContext) {
     var additionalHelperVariables = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
 
-    //console.log(expression, dataContext, additionalHelperVariables)
     // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
     if (Object.keys(dataContext).includes(expression)) {
@@ -7819,7 +7817,6 @@
 
   if (!isTesting()) {
     window.Alpine = Alpine;
-    window.Sandbox = Sandbox;
 
     if (window.deferLoadingAlpine) {
       window.deferLoadingAlpine(function () {

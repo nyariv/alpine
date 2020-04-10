@@ -90,7 +90,6 @@ const Alpine = {
 
 if (! isTesting()) {
     window.Alpine = Alpine
-    window.Sandbox = Sandbox
 
     if (window.deferLoadingAlpine) {
         window.deferLoadingAlpine(function () {
