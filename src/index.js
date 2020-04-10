@@ -1,5 +1,7 @@
 import Component from './component'
 import { domReady, isTesting } from './utils'
+import Sandbox from '@nyariv/sandboxjs'
+
 
 const Alpine = {
     start: async function () {
@@ -88,6 +90,7 @@ const Alpine = {
 
 if (! isTesting()) {
     window.Alpine = Alpine
+    window.Sandbox = Sandbox
 
     if (window.deferLoadingAlpine) {
         window.deferLoadingAlpine(function () {

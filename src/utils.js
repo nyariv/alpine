@@ -59,13 +59,18 @@ export function debounce(func, wait) {
 }
 
 export function saferEval(expression, dataContext, additionalHelperVariables = {}) {
-    const code = `return ${expression};`;
-    const sandbox = new Sandbox(Sandbox.SAFE_GLOBALS, Sandbox.SAFE_PROTOTYPES);
-    const exec = sandbox.compile(code);
-    return exec(dataContext, additionalHelperVariables);
+    console.log(expression, dataContext, additionalHelperVariables)
+    const code = `return ${expression};`
+    const allowedGlobals = Sandbox.SAFE_GLOBALS
+    const allowedPrototypes = Sandbox.SAFE_PROTOTYPES
+    allowedPrototypes.set(CustomEvent, [])
+    const sandbox = new Sandbox(allowedGlobals, allowedPrototypes)
+    const exec = sandbox.compile(code)
+    return exec(dataContext, additionalHelperVariables)
 }
 
 export function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}) {
+    console.log(expression, dataContext, additionalHelperVariables)
     // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
     if (Object.keys(dataContext).includes(expression)) {
@@ -74,10 +79,13 @@ export function saferEvalNoReturn(expression, dataContext, additionalHelperVaria
         }
     }
 
-    const code = `${expression}`;
-    const sandbox = new Sandbox(Sandbox.SAFE_GLOBALS, Sandbox.SAFE_PROTOTYPES);
-    const exec = sandbox.compile(code);
-    return exec(dataContext, additionalHelperVariables);
+    const code = `${expression}`
+    const allowedGlobals = Sandbox.SAFE_GLOBALS
+    const allowedPrototypes = Sandbox.SAFE_PROTOTYPES
+    allowedPrototypes.set(CustomEvent, [])
+    const sandbox = new Sandbox(allowedGlobals, allowedPrototypes)
+    const exec = sandbox.compile(code)
+    return exec(dataContext, additionalHelperVariables)
 }
 
 const xAttrRE = /^x-(on|bind|data|text|html|model|if|for|show|cloak|transition|ref)\b/

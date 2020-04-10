@@ -6059,16 +6059,20 @@
   }
   function saferEval(expression, dataContext) {
     var additionalHelperVariables = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    console.log(expression, dataContext, additionalHelperVariables);
     var code = "return ".concat(expression, ";");
-    var sandbox = new Sandbox(Sandbox.SAFE_GLOBALS, Sandbox.SAFE_PROTOTYPES);
+    var allowedGlobals = Sandbox.SAFE_GLOBALS;
+    var allowedPrototypes = Sandbox.SAFE_PROTOTYPES;
+    allowedPrototypes.set(CustomEvent, []);
+    var sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
     var exec = sandbox.compile(code);
     return exec(dataContext, additionalHelperVariables);
   }
   function saferEvalNoReturn(expression, dataContext) {
     var additionalHelperVariables = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-
-    // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
+    console.log(expression, dataContext, additionalHelperVariables); // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
+
     if (Object.keys(dataContext).includes(expression)) {
       if (typeof methodReference === 'function') {
         return dataContext[expression].call(dataContext, additionalHelperVariables['$event']);
@@ -6076,7 +6080,10 @@
     }
 
     var code = "".concat(expression);
-    var sandbox = new Sandbox(Sandbox.SAFE_GLOBALS, Sandbox.SAFE_PROTOTYPES);
+    var allowedGlobals = Sandbox.SAFE_GLOBALS;
+    var allowedPrototypes = Sandbox.SAFE_PROTOTYPES;
+    allowedPrototypes.set(CustomEvent, []);
+    var sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
     var exec = sandbox.compile(code);
     return exec(dataContext, additionalHelperVariables);
   }
@@ -7810,6 +7817,7 @@
 
   if (!isTesting()) {
     window.Alpine = Alpine;
+    window.Sandbox = Sandbox;
 
     if (window.deferLoadingAlpine) {
       window.deferLoadingAlpine(function () {
