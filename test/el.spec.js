@@ -22,13 +22,15 @@ test('$el', async () => {
 })
 
 test('$el doesnt return a proxy', async () => {
-    var isProxy
-    window.setIsProxy = function (el) {
-        isProxy = !! el.isProxy
+    window.isProxy
+    window.data = {
+        setIsProxy: function (el) {
+            window.isProxy = !! el.isProxy
+        }
     }
 
     document.body.innerHTML = `
-        <div x-data>
+        <div x-data="data">
             <button @click="setIsProxy($el)"></button>
         </div>
     `
@@ -37,5 +39,5 @@ test('$el doesnt return a proxy', async () => {
 
     document.querySelector('button').click()
 
-    expect(isProxy).toEqual(false)
+    expect(window.isProxy).toEqual(false)
 })
