@@ -2421,7 +2421,7 @@
       const dataAttr = this.$el.getAttribute('x-data');
       const dataExpression = dataAttr === '' ? '{}' : dataAttr;
       const initExpression = this.$el.getAttribute('x-init');
-      this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, {});
+      this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, window);
       // Construct a Proxy-based observable. This will be used to handle reactivity.
 
       let {

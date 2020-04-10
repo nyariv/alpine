@@ -41,7 +41,7 @@ test('x-init from data function with callback return for "x-mounted" functionali
     }
 
     document.body.innerHTML = `
-        <div x-data="window.data()" x-init="init()">
+        <div x-data="data()" x-init="init()">
             <span x-text="foo" x-ref="foo">baz</span>
         </div>
     `

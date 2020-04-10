@@ -37,7 +37,7 @@ test('x-data can use attributes from a reusable function', async () => {
             <span x-text="foo"></span>
         </div>
     `
-        test = function() {
+        window.test = function() {
             return {
                 foo: 'bar',
             }
