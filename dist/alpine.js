@@ -1263,19 +1263,20 @@
     };
   }
   function saferEval(expression, dataContext, additionalHelperVariables = {}) {
-    console.log(expression, dataContext, additionalHelperVariables);
+    //console.log(expression, dataContext, additionalHelperVariables)
     const code = `return ${expression};`;
     const allowedGlobals = Sandbox.SAFE_GLOBALS;
     const allowedPrototypes = Sandbox.SAFE_PROTOTYPES;
     allowedPrototypes.set(CustomEvent, []);
+    allowedPrototypes.set(HTMLSpanElement, []);
     const sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
     const exec = sandbox.compile(code);
     return exec(dataContext, additionalHelperVariables);
   }
   function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}) {
-    console.log(expression, dataContext, additionalHelperVariables); // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
+    //console.log(expression, dataContext, additionalHelperVariables)
+    // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
-
     if (Object.keys(dataContext).includes(expression)) {
       if (typeof methodReference === 'function') {
         return dataContext[expression].call(dataContext, additionalHelperVariables['$event']);
