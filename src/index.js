@@ -1,7 +1,5 @@
 import Component from './component'
 import { domReady, isTesting } from './utils'
-import Sandbox from '@nyariv/sandboxjs'
-
 
 const Alpine = {
     start: async function () {

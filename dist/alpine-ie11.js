@@ -6063,27 +6063,31 @@
     var allowedGlobals = Sandbox.SAFE_GLOBALS;
     var allowedPrototypes = Sandbox.SAFE_PROTOTYPES;
     allowedPrototypes.set(CustomEvent, []);
-    allowedPrototypes.set(HTMLSpanElement, []);
     var sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
     var exec = sandbox.compile(code);
     return exec(dataContext, additionalHelperVariables);
   }
   function saferEvalNoReturn(expression, dataContext) {
     var additionalHelperVariables = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-
-    // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
-    // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
-    if (Object.keys(dataContext).includes(expression)) {
-      if (typeof methodReference === 'function') {
-        return dataContext[expression].call(dataContext, additionalHelperVariables['$event']);
-      }
-    }
-
     var code = "".concat(expression);
     var allowedGlobals = Sandbox.SAFE_GLOBALS;
     var allowedPrototypes = Sandbox.SAFE_PROTOTYPES;
     allowedPrototypes.set(CustomEvent, []);
-    var sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
+    var sandbox = new Sandbox(allowedGlobals, allowedPrototypes); // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
+    // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
+
+    if (Object.keys(dataContext).includes(expression)) {
+      var _exec = sandbox.compile('return ' + code);
+
+      var methodReference = _exec(dataContext, additionalHelperVariables);
+
+      if (typeof methodReference === 'function') {
+        return methodReference.call(dataContext, additionalHelperVariables['$event']);
+      }
+
+      return methodReference;
+    }
+
     var exec = sandbox.compile(code);
     return exec(dataContext, additionalHelperVariables);
   }
