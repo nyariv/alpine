@@ -58,13 +58,16 @@ export function debounce(func, wait) {
     }
 }
 
+const allowedGlobals = Sandbox.SAFE_GLOBALS;
+const allowedPrototypes = Sandbox.SAFE_PROTOTYPES;
+allowedPrototypes.set(CustomEvent, []);
+const sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
+const expressionCache = {};
+
 export function saferEval(expression, dataContext, additionalHelperVariables = {}) {
-    const code = `return ${expression};`
-    const allowedGlobals = Sandbox.SAFE_GLOBALS
-    const allowedPrototypes = Sandbox.SAFE_PROTOTYPES
-    allowedPrototypes.set(CustomEvent, [])
-    const sandbox = new Sandbox(allowedGlobals, allowedPrototypes)
-    const exec = sandbox.compile(code)
+    const code = `return ${expression};`;
+    const exec = expressionCache[code] || sandbox.compile(code);
+    expressionCache[code] = exec;
     return exec(dataContext, additionalHelperVariables)
 }
 
