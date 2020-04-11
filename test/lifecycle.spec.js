@@ -12,7 +12,7 @@ test('x-init', async () => {
     }
 
     document.body.innerHTML = `
-        <div x-data="{ foo: 'bar' }" x-init="window.setSpanValue($refs.foo)">
+        <div x-data="{ foo: 'bar' }" x-init="setSpanValue($refs.foo)">
             <span x-text="foo" x-ref="foo">baz</span>
         </div>
     `

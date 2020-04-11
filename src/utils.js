@@ -61,6 +61,8 @@ export function debounce(func, wait) {
 const allowedGlobals = Sandbox.SAFE_GLOBALS;
 const allowedPrototypes = Sandbox.SAFE_PROTOTYPES;
 allowedPrototypes.set(CustomEvent, []);
+allowedPrototypes.set(Element, []);
+allowedPrototypes.set(MouseEvent, []);
 const sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
 const expressionCache = {};
 
@@ -68,7 +70,7 @@ export function saferEval(expression, dataContext, additionalHelperVariables = {
     const code = `return ${expression};`;
     const exec = expressionCache[code] || sandbox.compile(code);
     expressionCache[code] = exec;
-    return exec(dataContext, additionalHelperVariables)
+    return exec(window, dataContext, additionalHelperVariables)
 }
 
 export function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}) {
@@ -80,7 +82,7 @@ export function saferEvalNoReturn(expression, dataContext, additionalHelperVaria
     if (Object.keys(dataContext).includes(expression)) {
         const exec = expressionCache[codeRet] || sandbox.compile(codeRet);
         expressionCache[codeRet] = exec;
-        const methodReference = exec(dataContext, additionalHelperVariables)
+        const methodReference = exec(window, dataContext, additionalHelperVariables)
         if (typeof methodReference === 'function') {
             return methodReference.call(dataContext, additionalHelperVariables['$event'])
         }
@@ -89,7 +91,7 @@ export function saferEvalNoReturn(expression, dataContext, additionalHelperVaria
 
     const exec = expressionCache[code] || sandbox.compile(code)
     expressionCache[code] = exec;
-    return exec(dataContext, additionalHelperVariables)
+    return exec(window, dataContext, additionalHelperVariables)
 }
 
 const xAttrRE = /^x-(on|bind|data|text|html|model|if|for|show|cloak|transition|ref)\b/
