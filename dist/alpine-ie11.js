@@ -5329,7 +5329,7 @@
           if (typeof a === 'boolean') {
               a = new Boolean(a);
           }
-          ok = (typeof a.hasOwnProperty !== 'undefined' && a.hasOwnProperty(b)) || parseInt(b, 10) + "" === b + "";
+          ok = a.hasOwnProperty(b) || parseInt(b, 10) + "" === b + "";
           if (!ok && context.options.audit) {
               ok = true;
               if (typeof b === 'string') {
@@ -5367,7 +5367,6 @@
           if (context.options.forbidMethodCalls)
               throw new Error("Method calls are not allowed");
           if (typeof a !== 'function') {
-              console.log('not a function', obj);
               throw new Error(`${obj.prop} is not a function`);
           }
           if (typeof obj === 'function') {
@@ -5794,11 +5793,12 @@
   });
   function lispify(part, expected, lispTree) {
       expected = expected || ['initialize', 'expStart', 'value', 'function', 'prop', 'exp', 'modifier', 'incrementerBefore', 'expEnd'];
-      let ctx = { lispTree: lispTree };
-      if (part === undefined) return lispTree;
+      if (part === undefined)
+          return lispTree;
       if (!part.length && !expected.includes('expEnd')) {
           throw new Error("Unexpected end of expression");
       }
+      let ctx = { lispTree: lispTree };
       let res;
       expected.forEach((expect) => {
           if (expect === 'expEnd') {
