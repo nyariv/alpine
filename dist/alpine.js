@@ -1424,25 +1424,27 @@
       timeout = setTimeout(later, wait);
     };
   }
+  const allowedGlobals = Sandbox.SAFE_GLOBALS;
+  const allowedPrototypes = Sandbox.SAFE_PROTOTYPES;
+  allowedPrototypes.set(CustomEvent, []);
+  allowedPrototypes.set(Element, []);
+  allowedPrototypes.set(MouseEvent, []);
+  const sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
+  const expressionCache = {};
   function saferEval(expression, dataContext, additionalHelperVariables = {}) {
     const code = `return ${expression};`;
-    const allowedGlobals = Sandbox.SAFE_GLOBALS;
-    const allowedPrototypes = Sandbox.SAFE_PROTOTYPES;
-    allowedPrototypes.set(CustomEvent, []);
-    const sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
-    const exec = sandbox.compile(code);
+    const exec = expressionCache[code] || sandbox.compile(code);
+    expressionCache[code] = exec;
     return exec(dataContext, additionalHelperVariables);
   }
   function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}) {
     const code = `${expression}`;
-    const allowedGlobals = Sandbox.SAFE_GLOBALS;
-    const allowedPrototypes = Sandbox.SAFE_PROTOTYPES;
-    allowedPrototypes.set(CustomEvent, []);
-    const sandbox = new Sandbox(allowedGlobals, allowedPrototypes); // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
+    const codeRet = `return ${expression};`; // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
 
     if (Object.keys(dataContext).includes(expression)) {
-      const exec = sandbox.compile('return ' + code);
+      const exec = expressionCache[codeRet] || sandbox.compile(codeRet);
+      expressionCache[codeRet] = exec;
       const methodReference = exec(dataContext, additionalHelperVariables);
 
       if (typeof methodReference === 'function') {
@@ -1452,7 +1454,8 @@
       return methodReference;
     }
 
-    const exec = sandbox.compile(code);
+    const exec = expressionCache[code] || sandbox.compile(code);
+    expressionCache[code] = exec;
     return exec(dataContext, additionalHelperVariables);
   }
   const xAttrRE = /^x-(on|bind|data|text|html|model|if|for|show|cloak|transition|ref)\b/;
