@@ -98,30 +98,39 @@ test('.window modifier', async () => {
 })
 
 test('unbind global event handler when element is removed', async () => {
-    document._callCount = 0
-    Alpine.scope('document', document)
+    window.data = function() {
+        return {
+            callCount: 0
+        }
+    }
 
     document.body.innerHTML = `
-        <div x-data="{}">
-            <div x-on:click.window="document._callCount += 1"></div>
+        <div x-data="data()">
+            <span x-text="callCount"></span>
+            <div id="listener" x-on:click.window="callCount += 1"></div>
         </div>
     `
 
     Alpine.start()
 
-    document.body.click()
-
-    document.body.innerHTML = ''
+    expect(document.querySelector('span').innerText).toEqual(0)
 
     document.body.click()
 
     await new Promise(resolve => setTimeout(resolve, 1))
 
-    expect(document._callCount).toEqual(1)
+    expect(document.querySelector('span').innerText).toEqual(1)
+
+    document.querySelector('#listener').remove()
+
+    document.body.click()
+
+    await new Promise(resolve => setTimeout(resolve, 1))
+
+    expect(document.querySelector('span').innerText).toEqual(1)
 })
 
 test('.document modifier', async () => {
-    Alpine.scope('document', document)
     document.body.innerHTML = `
         <div x-data="{ foo: 'bar' }">
             <div x-on:click.document="foo = 'baz'"></div>
@@ -350,7 +359,7 @@ test('event with colon', async () => {
 })
 
 test('prevent default action when an event returns false', async () => {
-    Alpine.scope('confirm', jest.fn().mockImplementation(() => false))
+    window.confirm = jest.fn().mockImplementation(() => false)
 
     document.body.innerHTML = `
         <div x-data="{}">
@@ -366,7 +375,7 @@ test('prevent default action when an event returns false', async () => {
 
     expect(document.querySelector('input').checked).toEqual(false)
 
-    Alpine.scope('confirm', jest.fn().mockImplementation(() => true))
+    window.confirm = jest.fn().mockImplementation(() => true)
 
     document.querySelector('input').click()
 

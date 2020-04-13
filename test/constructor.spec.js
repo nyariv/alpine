@@ -203,20 +203,26 @@ test('auto-initialize new elements added to a component', async () => {
 
 test('Alpine mutations don\'t trigger (like x-if and x-for) MutationObserver', async () => {
     var runObservers = []
-    var evaluations = 0
 
     global.MutationObserver = class {
         constructor(callback) { runObservers.push(callback) }
         observe() {}
     }
 
-    Alpine.scope('bob', () => {
-        evaluations++
-        return 'lob'
-    })
+    window.evaluations = 0
+
+    window.data = function() {
+        return {
+            foo: 'bar',
+            bob() {
+                window.evaluations++
+                return 'lob'
+            }
+        }
+    }
 
     document.body.innerHTML = `
-        <div x-data="{ foo: 'bar' }" id="component">
+        <div x-data="data()" id="component">
             <template x-if="foo === 'baz'">
                 <span x-text="bob()"></span>
             </template>
@@ -285,14 +291,18 @@ test('nested components only get registered once on initialization', async () =>
         observe() {}
     }
 
-    var initCount = 0
-    Alpine.scope('registerInit', function () {
-        initCount = initCount + 1
-    })
+    window.initCount = 0
+    window.data = function() {
+        return {
+            registerInit() {
+                window.initCount = window.initCount + 1
+            }
+        }
+    }
 
     document.body.innerHTML = `
-        <div x-data x-init="registerInit()">
-            <div x-data x-init="registerInit()"></div>
+        <div x-data="data()" x-init="registerInit()">
+            <div x-data="data()" x-init="registerInit()"></div>
         </div>
     `
 

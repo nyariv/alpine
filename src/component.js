@@ -7,8 +7,6 @@ import { registerModelListener } from './directives/model'
 import { registerListener } from './directives/on'
 import { unwrap, wrap } from './observable'
 
-export const globalScope = {};
-
 export default class Component {
     constructor(el, seedDataForCloning = null) {
         this.$el = el
@@ -17,7 +15,7 @@ export default class Component {
         const dataExpression = dataAttr === '' ? '{}' : dataAttr
         const initExpression = this.$el.getAttribute('x-init')
 
-        this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, globalScope)
+        this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, {})
 
         /* IE11-ONLY:START */
             // For IE11, add our magic properties to the original data for access.
@@ -297,14 +295,14 @@ export default class Component {
         return saferEval(expression, this.$data, {
             ...extraVars(),
             $dispatch: this.getDispatchFunction(el),
-        }, globalScope)
+        })
     }
 
     evaluateCommandExpression(el, expression, extraVars = () => {}) {
         return saferEvalNoReturn(expression, this.$data, {
             ...extraVars(),
             $dispatch: this.getDispatchFunction(el),
-        }, globalScope)
+        })
     }
 
     getDispatchFunction (el) {
