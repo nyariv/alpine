@@ -383,7 +383,9 @@ export default class Component {
         return new Proxy(refObj, {
             get(object, property) {
                 if (property === '$isAlpineProxy') return true
-                if (property === 'hasOwnProperty') return (key) => this.has(null, key);
+
+                if (property === 'hasOwnProperty') return (key) => true
+
                 var ref
 
                 // We can't just query the DOM because it's hard to filter out refs in
@@ -395,21 +397,6 @@ export default class Component {
                 })
 
                 return ref
-            },
-            has(target, property) {
-                if (property === '$isAlpineProxy') return true
-
-                var ref
-
-                // We can't just query the DOM because it's hard to filter out refs in
-                // nested components.
-                self.walkAndSkipNestedComponents(self.$el, el => {
-                    if (el.hasAttribute('x-ref') && el.getAttribute('x-ref') === property) {
-                        ref = el
-                    }
-                })
-
-                return !!ref
             }
         })
     }

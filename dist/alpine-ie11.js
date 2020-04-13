@@ -6290,9 +6290,9 @@
   }
   function saferEvalNoReturn(expression, dataContext) {
     var additionalHelperVariables = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-    var code = "".concat(expression); // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
-    // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
 
+    // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
+    // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
     if (Object.keys(dataContext).includes(expression)) {
       var methodReference = dataContext[expression];
 
@@ -6303,6 +6303,7 @@
       return methodReference;
     }
 
+    var code = "".concat(expression);
     var exec = expressionCache[code] || sandbox.compile(code);
     expressionCache[code] = exec;
     return exec(window, dataContext, additionalHelperVariables);
@@ -7381,8 +7382,6 @@
     return new Proxy(target, proxyHandler);
   }
 
-  var globalScope = {};
-
   var Component = /*#__PURE__*/function () {
     function Component(el) {
       var _this = this;
@@ -7891,7 +7890,7 @@
             if (property === 'hasOwnProperty') return function (key) {
               _newArrowCheck(this, _this24);
 
-              return this.has(null, key);
+              return true;
             }.bind(this);
             var ref; // We can't just query the DOM because it's hard to filter out refs in
             // nested components.
@@ -7904,22 +7903,6 @@
               }
             }.bind(this));
             return ref;
-          },
-          has: function has(target, property) {
-            var _this25 = this;
-
-            if (property === '$isAlpineProxy') return true;
-            var ref; // We can't just query the DOM because it's hard to filter out refs in
-            // nested components.
-
-            self.walkAndSkipNestedComponents(self.$el, function (el) {
-              _newArrowCheck(this, _this25);
-
-              if (el.hasAttribute('x-ref') && el.getAttribute('x-ref') === property) {
-                ref = el;
-              }
-            }.bind(this));
-            return !!ref;
           }
         });
       }
@@ -8055,13 +8038,6 @@
       if (!newEl.__x) {
         newEl.__x = new Component(newEl, component.getUnobservedData());
       }
-    },
-    scope: function scope(name, data) {
-      if (data !== undefined) {
-        globalScope[name] = data;
-      }
-
-      return globalScope[name];
     }
   };
 

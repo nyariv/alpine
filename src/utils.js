@@ -74,8 +74,6 @@ export function saferEval(expression, dataContext, additionalHelperVariables = {
 }
 
 export function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}) {
-    const code = `${expression}`
-
     // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
     if (Object.keys(dataContext).includes(expression)) {
@@ -86,6 +84,7 @@ export function saferEvalNoReturn(expression, dataContext, additionalHelperVaria
         return methodReference
     }
 
+    const code = `${expression}`
     const exec = expressionCache[code] || sandbox.compile(code)
     expressionCache[code] = exec;
     return exec(window, dataContext, additionalHelperVariables)

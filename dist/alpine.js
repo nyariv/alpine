@@ -1493,9 +1493,8 @@
     return exec(window, dataContext, additionalHelperVariables);
   }
   function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}) {
-    const code = `${expression}`; // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
+    // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
-
     if (Object.keys(dataContext).includes(expression)) {
       const methodReference = dataContext[expression];
 
@@ -1506,6 +1505,7 @@
       return methodReference;
     }
 
+    const code = `${expression}`;
     const exec = expressionCache[code] || sandbox.compile(code);
     expressionCache[code] = exec;
     return exec(window, dataContext, additionalHelperVariables);
@@ -2634,7 +2634,6 @@
     return copy;
   }
 
-  const globalScope = {};
   class Component {
     constructor(el, seedDataForCloning = null) {
       this.$el = el;
@@ -2963,7 +2962,7 @@
       return new Proxy(refObj, {
         get(object, property) {
           if (property === '$isAlpineProxy') return true;
-          if (property === 'hasOwnProperty') return key => this.has(null, key);
+          if (property === 'hasOwnProperty') return key => true;
           var ref; // We can't just query the DOM because it's hard to filter out refs in
           // nested components.
 
@@ -2973,19 +2972,6 @@
             }
           });
           return ref;
-        },
-
-        has(target, property) {
-          if (property === '$isAlpineProxy') return true;
-          var ref; // We can't just query the DOM because it's hard to filter out refs in
-          // nested components.
-
-          self.walkAndSkipNestedComponents(self.$el, el => {
-            if (el.hasAttribute('x-ref') && el.getAttribute('x-ref') === property) {
-              ref = el;
-            }
-          });
-          return !!ref;
         }
 
       });
@@ -3059,13 +3045,6 @@
       if (!newEl.__x) {
         newEl.__x = new Component(newEl, component.getUnobservedData());
       }
-    },
-    scope: function scope(name, data) {
-      if (data !== undefined) {
-        globalScope[name] = data;
-      }
-
-      return globalScope[name];
     }
   };
 
