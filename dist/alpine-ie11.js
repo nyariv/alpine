@@ -2341,10 +2341,125 @@
     return target;
   }
 
+  function _inherits(subClass, superClass) {
+    if (typeof superClass !== "function" && superClass !== null) {
+      throw new TypeError("Super expression must either be null or a function");
+    }
+
+    subClass.prototype = Object.create(superClass && superClass.prototype, {
+      constructor: {
+        value: subClass,
+        writable: true,
+        configurable: true
+      }
+    });
+    if (superClass) _setPrototypeOf(subClass, superClass);
+  }
+
+  function _getPrototypeOf(o) {
+    _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
+      return o.__proto__ || Object.getPrototypeOf(o);
+    };
+    return _getPrototypeOf(o);
+  }
+
+  function _setPrototypeOf(o, p) {
+    _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+      o.__proto__ = p;
+      return o;
+    };
+
+    return _setPrototypeOf(o, p);
+  }
+
+  function isNativeReflectConstruct() {
+    if (typeof Reflect === "undefined" || !Reflect.construct) return false;
+    if (Reflect.construct.sham) return false;
+    if (typeof Proxy === "function") return true;
+
+    try {
+      Date.prototype.toString.call(Reflect.construct(Date, [], function () {}));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function _construct(Parent, args, Class) {
+    if (isNativeReflectConstruct()) {
+      _construct = Reflect.construct;
+    } else {
+      _construct = function _construct(Parent, args, Class) {
+        var a = [null];
+        a.push.apply(a, args);
+        var Constructor = Function.bind.apply(Parent, a);
+        var instance = new Constructor();
+        if (Class) _setPrototypeOf(instance, Class.prototype);
+        return instance;
+      };
+    }
+
+    return _construct.apply(null, arguments);
+  }
+
+  function _isNativeFunction(fn) {
+    return Function.toString.call(fn).indexOf("[native code]") !== -1;
+  }
+
+  function _wrapNativeSuper(Class) {
+    var _cache = typeof Map === "function" ? new Map() : undefined;
+
+    _wrapNativeSuper = function _wrapNativeSuper(Class) {
+      if (Class === null || !_isNativeFunction(Class)) return Class;
+
+      if (typeof Class !== "function") {
+        throw new TypeError("Super expression must either be null or a function");
+      }
+
+      if (typeof _cache !== "undefined") {
+        if (_cache.has(Class)) return _cache.get(Class);
+
+        _cache.set(Class, Wrapper);
+      }
+
+      function Wrapper() {
+        return _construct(Class, arguments, _getPrototypeOf(this).constructor);
+      }
+
+      Wrapper.prototype = Object.create(Class.prototype, {
+        constructor: {
+          value: Wrapper,
+          enumerable: false,
+          writable: true,
+          configurable: true
+        }
+      });
+      return _setPrototypeOf(Wrapper, Class);
+    };
+
+    return _wrapNativeSuper(Class);
+  }
+
   function _newArrowCheck(innerThis, boundThis) {
     if (innerThis !== boundThis) {
       throw new TypeError("Cannot instantiate an arrow function");
     }
+  }
+
+  function _assertThisInitialized(self) {
+    if (self === void 0) {
+      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+    }
+
+    return self;
+  }
+
+  function _possibleConstructorReturn(self, call) {
+    if (call && (typeof call === "object" || typeof call === "function")) {
+      return call;
+    }
+
+    return _assertThisInitialized(self);
   }
 
   function _toConsumableArray(arr) {
@@ -4844,1379 +4959,4304 @@
     }
   });
 
-  class Prop {
-      constructor(context, prop, isConst = false, isGlobal = false) {
-          this.context = context;
-          this.prop = prop;
-          this.isConst = isConst;
-          this.isGlobal = isGlobal;
-      }
-  }
-  class Lisp {
-      constructor(obj) {
-          this.op = obj.op;
-          this.a = obj.a;
-          this.b = obj.b;
-      }
-  }
-  class If {
-      constructor(t, f) {
-          this.t = t;
-          this.f = f;
-      }
-  }
-  class KeyVal {
-      constructor(key, val) {
-          this.key = key;
-          this.val = val;
-      }
-  }
-  class ObjectFunc {
-      constructor(key, args, tree) {
-          this.key = key;
-          this.args = args;
-          this.tree = tree;
-      }
-  }
-  class SpreadObject {
-      constructor(item) {
-          this.item = item;
-      }
-  }
-  class SpreadArray {
-      constructor(item) {
-          this.item = item;
-      }
-  }
-  class Scope {
-      constructor(parent, vars = {}, functionThis = undefined) {
-          this.const = {};
-          this.var = {};
-          this.globals = {};
-          this.parent = parent;
-          this.let = !parent ? {} : vars;
-          this.globals = !parent ? vars : {};
-          this.functionThis = functionThis || !parent;
-          if (functionThis) {
-              this.declare('this', 'var', functionThis);
-          }
-      }
-      get(key, functionScope = false) {
-          if (!this.parent || !functionScope || this.functionThis) {
-              if (this.const.hasOwnProperty(key)) {
-                  return new Prop(this.const, key, true, key in this.globals);
-              }
-              if (this.var.hasOwnProperty(key)) {
-                  return new Prop(this.var, key, false, key in this.globals);
-              }
-              if (this.let.hasOwnProperty(key)) {
-                  return new Prop(this.let, key, false, key in this.globals);
-              }
-              if (!this.parent && this.globals.hasOwnProperty(key)) {
-                  return new Prop(this.functionThis, key, false, true);
-              }
-              if (!this.parent) {
-                  return new Prop(undefined, key);
-              }
-          }
-          return this.parent.get(key, functionScope);
-      }
-      set(key, val) {
-          if (key === 'this')
-              throw new SyntaxError('"this" cannot be a variable');
-          let prop = this.get(key);
-          if (prop.context === undefined) {
-              throw new ReferenceError(`Variable '${key}' was not declared.`);
-          }
-          if (prop.isConst) {
-              throw new TypeError(`Cannot assign to const variable '${key}'`);
-          }
-          if (prop.isGlobal) {
-              throw new SandboxError(`Cannot override global variable '${key}'`);
-          }
-          prop.context[prop] = val;
-          return prop;
-      }
-      declare(key, type = null, value = undefined, isGlobal = false) {
-          if (type === 'var' && !this.functionThis && this.parent) {
-              this.parent.declare(key, type, value, isGlobal);
-          }
-          else if (!(key in this.var) || !(key in this.let) || !(key in this.const) || !(key in this.globals)) {
-              if (isGlobal) {
-                  this.globals[key] = value;
-              }
-              this[type][key] = value;
-          }
-          else {
-              throw Error(`Variable '${key}' already declared`);
-          }
-      }
-  }
-  class ParseError extends Error {
-      constructor(message, code) {
-          super(message);
-          this.code = code;
-      }
-  }
-  class SandboxError extends Error {
-  }
-  class SandboxGlobal {
-      constructor(globals) {
-          if (globals === globalThis)
-              return globalThis;
-          for (let i in globals) {
-              this[i] = globals[i];
-          }
-      }
-  }
-  function sandboxFunction(context) {
-      return SandboxFunction;
-      function SandboxFunction(...params) {
-          let code = params.pop();
-          let parsed = Sandbox.parse(code);
-          return function (...args) {
-              const vars = {};
-              for (let i of params) {
-                  vars[i] = args.shift();
-              }
-              const res = context.sandbox.executeTree(parsed);
-              if (context.options.audit) {
-                  for (let key in res.auditReport.globalsAccess) {
-                      let add = res.auditReport.globalsAccess[key];
-                      context.auditReport.globalsAccess[key] = context.auditReport.globalsAccess[key] || new Set();
-                      add.forEach((val) => {
-                          context.auditReport.globalsAccess[key].add(val);
-                      });
-                  }
-                  for (let Class in res.auditReport.prototypeAccess) {
-                      let add = res.auditReport.prototypeAccess[Class];
-                      context.auditReport.prototypeAccess[Class] = context.auditReport.prototypeAccess[Class] || new Set();
-                      add.forEach((val) => {
-                          context.auditReport.prototypeAccess[Class].add(val);
-                      });
-                  }
-              }
-              return res.result;
-          };
-      }
-  }
-  function sandboxedEval(func) {
-      return sandboxEval;
-      function sandboxEval(code) {
-          return func(code)();
-      }
-  }
-  let expectTypes = {
-      op: {
-          types: { op: /^(\/|\*\*(?!\=)|\*(?!\=)|\%(?!\=))/ },
-          next: [
-              'value',
-              'prop',
-              'exp',
-              'modifier',
-              'incrementerBefore',
-          ],
-          firstChar: new Set([...'/*%'])
-      },
-      splitter: {
-          types: {
-              split: /^(&&|&|\|\||\||<=|>=|<|>|!==|!=|===|==| instanceof | in |\+(?!\+)|\-(?!\-))(?!\=)/,
-          },
-          next: [
-              'value',
-              'prop',
-              'exp',
-              'modifier',
-              'incrementerBefore',
-          ],
-          firstChar: new Set([...'&|<>!= +-'])
-      },
-      if: {
-          types: {
-              if: /^\?/,
-              else: /^:/,
-          },
-          next: [
-              'expEnd'
-          ],
-          firstChar: new Set([...'?:'])
-      },
-      assignment: {
-          types: {
-              assignModify: /^(\-=|\+=|\/=|\*\*=|\*=|%=|\^=|\&=|\|=)/,
-              assign: /^(=)/
-          },
-          next: [
-              'value',
-              'function',
-              'prop',
-              'exp',
-              'modifier',
-              'incrementerBefore',
-          ],
-          firstChar: new Set([...'+-=*%^&|/'])
-      },
-      incrementerBefore: {
-          types: { incrementerBefore: /^(\+\+|\-\-)/ },
-          next: [
-              'prop',
-          ],
-          firstChar: new Set([...'+-'])
-      },
-      incrementerAfter: {
-          types: { incrementerAfter: /^(\+\+|\-\-)/ },
-          next: [
-              'splitter',
-              'op',
-              'expEnd'
-          ],
-          firstChar: new Set([...'+-'])
-      },
-      expEdge: {
-          types: {
-              arrayProp: /^[\[]/,
-              call: /^[\(]/,
-          },
-          next: [
-              'splitter',
-              'op',
-              'expEdge',
-              'if',
-              'dot',
-              'expEnd'
-          ],
-          firstChar: new Set([...'[('])
-      },
-      modifier: {
-          types: {
-              not: /^!/,
-              inverse: /^~/,
-              negative: /^\-(?!\-)/,
-              positive: /^\+(?!\+)/,
-              typeof: /^ typeof /,
-          },
-          next: [
-              'exp',
-              'modifier',
-              'value',
-              'prop',
-              'incrementerBefore',
-          ],
-          firstChar: new Set([...'!~-+ '])
-      },
-      exp: {
-          types: {
-              createObject: /^\{/,
-              createArray: /^\[/,
-              group: /^\(/,
-          },
-          next: [
-              'splitter',
-              'op',
-              'expEdge',
-              'if',
-              'dot',
-              'expEnd'
-          ],
-          firstChar: new Set([...'{[('])
-      },
-      dot: {
-          types: {
-              dot: /^\.(?!\.)/
-          },
-          next: [
-              'splitter',
-              'incrementerAfter',
-              'assignment',
-              'op',
-              'expEdge',
-              'if',
-              'dot',
-              'expEnd'
-          ],
-          firstChar: new Set([...'.'])
-      },
-      prop: {
-          types: {
-              prop: /^[a-zA-Z\$_][a-zA-Z\d\$_]*/,
-          },
-          next: [
-              'splitter',
-              'incrementerAfter',
-              'assignment',
-              'op',
-              'expEdge',
-              'if',
-              'dot',
-              'expEnd'
-          ],
-          firstChar: new Set([...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYX$_'])
-      },
-      value: {
-          types: {
-              number: /^\-?\d+(\.\d+)?/,
-              string: /^"(\d+)"/,
-              literal: /^`(\d+)`/,
-              boolean: /^(true|false)(?![\w$_])/,
-              null: /^null(?![\w$_])/,
-              und: /^undefined(?![\w$_])/,
-              NaN: /^NaN(?![\w$_])/,
-              Infinity: /^Infinity(?![\w$_])/,
-          },
-          next: [
-              'splitter',
-              'op',
-              'if',
-              'dot',
-              'expEnd'
-          ],
-          firstChar: new Set([...'-"`tfunNI0123456789'])
-      },
-      function: {
-          types: {
-              arrowFunc: /^\(?(([a-zA-Z\$_][a-zA-Z\d\$_]*,?)*)(\))?=>({)?/
-          },
-          next: [
-              'expEnd'
-          ],
-          firstChar: new Set([...'(abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYX$_'])
-      },
-      initialize: {
-          types: {
-              initialize: /^ (var|let|const) [a-zA-Z\$_][a-zA-Z\d\$_]*/
-          },
-          next: [
-              'value',
-              'function',
-              'prop',
-              'exp',
-              'modifier',
-              'incrementerBefore',
-              'expEnd'
-          ],
-          firstChar: new Set([...' '])
-      },
-      spreadObject: {
-          types: {
-              spreadObject: /^\.\.\./
-          },
-          next: [
-              'value',
-              'exp',
-              'prop',
-          ],
-          firstChar: new Set([...'.'])
-      },
-      spreadArray: {
-          types: {
-              spreadArray: /^\.\.\./
-          },
-          next: [
-              'value',
-              'exp',
-              'prop',
-          ],
-          firstChar: new Set([...'.'])
-      },
-      expEnd: { types: {}, next: [], firstChar: new Set() },
-      expStart: {
-          types: {
-              return: /^ return /,
-          },
-          next: [
-              'value',
-              'function',
-              'prop',
-              'exp',
-              'modifier',
-              'incrementerBefore',
-              'expEnd'
-          ],
-          firstChar: new Set([...' '])
-      }
+  var nativeGetOwnPropertyNames = objectGetOwnPropertyNames.f;
+
+  var toString$1 = {}.toString;
+
+  var windowNames = typeof window == 'object' && window && Object.getOwnPropertyNames
+    ? Object.getOwnPropertyNames(window) : [];
+
+  var getWindowNames = function (it) {
+    try {
+      return nativeGetOwnPropertyNames(it);
+    } catch (error) {
+      return windowNames.slice();
+    }
   };
-  let closings = {
-      "(": ")",
-      "[": "]",
-      "{": "}",
-      "'": "'",
-      '"': '"',
-      "`": "`"
+
+  // fallback for IE11 buggy Object.getOwnPropertyNames with iframe and window
+  var f$6 = function getOwnPropertyNames(it) {
+    return windowNames && toString$1.call(it) == '[object Window]'
+      ? getWindowNames(it)
+      : nativeGetOwnPropertyNames(toIndexedObject(it));
   };
-  let closingsRegex = {
-      "(": /^\)/,
-      "[": /^\]/,
-      "{": /^\}/,
-      "'": /^\'/,
-      '"': /^\"/,
-      "`": /^\`/
+
+  var objectGetOwnPropertyNamesExternal = {
+  	f: f$6
   };
-  const restOfExp = (part, tests, quote) => {
-      let okFirstChars = /^[\+\-~ !]/;
-      let isStart = true;
-      tests = tests || [
-          expectTypes.op.types.op,
-          expectTypes.splitter.types.split,
-          expectTypes.if.types.if,
-          expectTypes.if.types.else
-      ];
-      let escape = false;
-      let done = false;
-      let i;
-      for (i = 0; i < part.length && !done; i++) {
-          let char = part[i];
-          if (quote === '"' || quote === "'" || quote === "`") {
-              if (quote === "`" && char === "$" && part[i + 1] === "{" && !escape) {
-                  let skip = restOfExp(part.substring(i + 2), [/^}/]);
-                  i += skip.length + 2;
-              }
-              else if (char === quote && !escape) {
-                  return part.substring(0, i);
-              }
-              escape = char === "\\";
-          }
-          else if (closings[char]) {
-              let skip = restOfExp(part.substring(i + 1), [closingsRegex[quote]], char);
-              i += skip.length + 1;
-              isStart = false;
-          }
-          else if (!quote) {
-              let sub = part.substring(i);
-              for (let test of tests) {
-                  done = test.test(sub);
-                  if (done)
-                      break;
-              }
-              if (isStart) {
-                  if (okFirstChars.test(sub)) {
-                      done = false;
-                  }
-                  else {
-                      isStart = false;
-                  }
-              }
-              if (done)
-                  break;
-          }
-          else if (char === closings[quote]) {
-              return part.substring(0, i);
-          }
-      }
-      return part.substring(0, i);
+
+  var f$7 = wellKnownSymbol;
+
+  var wellKnownSymbolWrapped = {
+  	f: f$7
   };
-  restOfExp.next = [
-      'splitter',
-      'op',
-      'expEnd'
-  ];
-  function assignCheck(obj) {
-      if (obj.context === undefined) {
-          throw new ReferenceError(`Cannot assign value to undefined.`);
-      }
-      if (typeof obj.context !== 'object') {
-          throw new SyntaxError(`Cannot assign value to a primitive.`);
-      }
-      if (obj.isConst) {
-          throw new TypeError(`Cannot set value to const variable '${obj.prop}'`);
-      }
-      if (obj.isGlobal) {
-          throw new SandboxError(`Cannot override property of global variable '${obj.prop}'`);
-      }
-      if (typeof obj.context[obj.prop] === 'function' && !obj.context.hasOwnProperty(obj.prop)) {
-          throw new SandboxError(`Override prototype property '${obj.prop}' not allowed`);
-      }
-  }
-  let ops2 = {
-      'prop': (a, b, obj, context, scope) => {
-          if (a === null) {
-              throw new TypeError(`Cannot get propety ${b} of null`);
-          }
-          if (typeof a === 'undefined') {
-              let prop = scope.get(b);
-              if (prop.context === undefined)
-                  throw new ReferenceError(`${b} is not defined`);
-              if (prop.context === context.sandboxGlobal) {
-                  if (context.options.audit) {
-                      context.auditReport.globalsAccess.add(b);
-                  }
-                  if (context.sandboxGlobal[b] === Function) {
-                      return context.Function;
-                  }
-                  if (context.sandboxGlobal[b] === eval) {
-                      return context.eval;
-                  }
-                  const fn = context.sandboxGlobal[b];
-                  if (setTimeout === fn || fn === setInterval) {
-                      return undefined;
-                  }
-              }
-              if (prop.context && prop.context[b] === globalThis) {
-                  return context.globalScope.get('this');
-              }
-              return prop;
-          }
-          let ok = false;
-          if (typeof a === 'number') {
-              a = new Number(a);
-          }
-          if (typeof a === 'string') {
-              a = new String(a);
-          }
-          if (typeof a === 'boolean') {
-              a = new Boolean(a);
-          }
-          ok = a.hasOwnProperty(b) || parseInt(b, 10) + "" === b + "";
-          if (!ok && context.options.audit) {
-              ok = true;
-              if (typeof b === 'string') {
-                  let prot = a.constructor.prototype;
-                  do {
-                      if (prot.hasOwnProperty(b)) {
-                          if (!context.auditReport.prototypeAccess[prot.constructor.name]) {
-                              context.auditReport.prototypeAccess[prot.constructor.name] = new Set();
-                          }
-                          context.auditReport.prototypeAccess[prot.constructor.name].add(b);
-                      }
-                  } while (prot = Object.getPrototypeOf(prot));
-              }
-          }
-          if (!ok) {
-              let prot = a.constructor.prototype;
-              do {
-                  const whitelist = context.prototypeWhitelist.get(prot.constructor);
-                  ok = whitelist && (!whitelist.size || whitelist.has(b));
-                  if (ok)
-                      break;
-              } while (prot = Object.getPrototypeOf(prot));
-          }
-          if (ok) {
-              if (a[b] === Function) {
-                  return context.Function;
-              }
-              if (a[b] === globalThis) {
-                  return context.globalScope.get('this');
-              }
-              let g = obj.isGlobal || a.constructor === Function;
-              return new Prop(a, b, false, g);
-          }
-          throw Error(`Method or property access prevented: ${a.constructor.name}.${b}`);
-      },
-      'call': (a, b, obj, context, scope) => {
-          if (context.options.forbidMethodCalls)
-              throw new SandboxError("Method calls are not allowed");
-          if (typeof a !== 'function') {
-              throw new TypeError(`${obj.prop} is not a function`);
-          }
-          if (typeof obj === 'function') {
-              return obj(...b.map((item) => exec(item, scope, context)));
-          }
-          return obj.context[obj.prop](...b.map((item) => exec(item, scope, context)));
-      },
-      'createObject': (a, b, obj, context, scope) => {
-          let res = {};
-          for (let item of b) {
-              if (item instanceof SpreadObject) {
-                  res = { ...res, ...item.item };
-              }
-              else if (item instanceof ObjectFunc) {
-                  let f = item;
-                  res[f.key] = function (...args) {
-                      const vars = {};
-                      (f.args).forEach((arg, i) => {
-                          vars[arg] = args[i];
-                      });
-                      return context.sandbox.executeTree({
-                          tree: f.tree,
-                          strings: context.strings,
-                          literals: context.literals,
-                      }, [new Scope(scope, vars, this)]).result;
-                  };
-              }
-              else {
-                  res[item.key] = item.val;
-              }
-          }
-          return res;
-      },
-      'keyVal': (a, b) => new KeyVal(a, b),
-      'createArray': (a, b, obj, context, scope) => {
-          let arrs = [];
-          let curr = [];
-          b.forEach((item) => {
-              if (item instanceof SpreadArray) {
-                  if (curr.length) {
-                      arrs.push(curr);
-                      curr = [];
-                  }
-                  arrs.push(item.item);
-              }
-              else {
-                  curr.push(exec(item, scope, context));
-              }
-          });
-          if (curr.length)
-              arrs.push(curr);
-          return arrs.flat();
-      },
-      'group': (a, b) => b,
-      'string': (a, b, obj, context) => context.strings[b],
-      'literal': (a, b, obj, context, scope) => {
-          let name = context.literals[b].a;
-          return name.replace(/(\$\$)*(\$)?\${(\d+)}/g, (match, $$, $, num) => {
-              if ($)
-                  return match;
-              let res = exec(context.literals[b].b[parseInt(num, 10)], scope, context);
-              res = res instanceof Prop ? res.context[res.prop] : res;
-              return ($$ ? $$ : '') + `${res}`.replace(/\$/g, '$$');
-          }).replace(/\$\$/g, '$');
-      },
-      'spreadArray': (a, b, obj, context, scope) => {
-          return new SpreadArray(exec(b, scope, context));
-      },
-      'spreadObject': (a, b, obj, context, scope) => {
-          return new SpreadObject(exec(b, scope, context));
-      },
-      '!': (a, b) => !b,
-      '~': (a, b) => ~b,
-      '++$': (a, b, obj) => ++obj.context[obj.prop],
-      '$++': (a, b, obj) => obj.context[obj.prop]++,
-      '--$': (a, b, obj) => --obj.context[obj.prop],
-      '$--': (a, b, obj) => obj.context[obj.prop]--,
-      '=': (a, b, obj, context, scope, bobj) => {
-          assignCheck(obj);
-          obj.context[obj.prop] = b;
-          return new Prop(obj.context, obj.prop, false, obj.isGlobal);
-      },
-      '+=': (a, b, obj) => {
-          assignCheck(obj);
-          return obj.context[obj.prop] += b;
-      },
-      '-=': (a, b, obj) => {
-          assignCheck(obj);
-          return obj.context[obj.prop] -= b;
-      },
-      '/=': (a, b, obj) => {
-          assignCheck(obj);
-          return obj.context[obj.prop] /= b;
-      },
-      '*=': (a, b, obj) => {
-          assignCheck(obj);
-          return obj.context[obj.prop] *= b;
-      },
-      '**=': (a, b, obj) => {
-          assignCheck(obj);
-          return obj.context[obj.prop] **= b;
-      },
-      '%=': (a, b, obj) => {
-          assignCheck(obj);
-          return obj.context[obj.prop] %= b;
-      },
-      '^=': (a, b, obj) => {
-          assignCheck(obj);
-          return obj.context[obj.prop] ^= b;
-      },
-      '&=': (a, b, obj) => {
-          assignCheck(obj);
-          return obj.context[obj.prop] &= b;
-      },
-      '|=': (a, b, obj) => {
-          assignCheck(obj);
-          return obj.context[obj.prop] |= b;
-      },
-      '?': (a, b) => {
-          if (!(b instanceof If)) {
-              throw new SyntaxError('Invalid inline if');
-          }
-          return a ? b.t : b.f;
-      },
-      '>': (a, b) => a > b,
-      '<': (a, b) => a < b,
-      '>=': (a, b) => a >= b,
-      '<=': (a, b) => a <= b,
-      '==': (a, b) => a == b,
-      '===': (a, b) => a === b,
-      '!=': (a, b) => a != b,
-      '!==': (a, b) => a !== b,
-      '&&': (a, b) => a && b,
-      '||': (a, b) => a || b,
-      '&': (a, b) => a & b,
-      '|': (a, b) => a | b,
-      ':': (a, b) => new If(a, b),
-      '+': (a, b) => a + b,
-      '-': (a, b) => a - b,
-      '$+': (a, b) => +b,
-      '$-': (a, b) => -b,
-      '/': (a, b) => a / b,
-      '*': (a, b) => a * b,
-      '%': (a, b) => a % b,
-      ' typeof ': (a, b) => typeof b,
-      ' instanceof ': (a, b) => a instanceof b,
-      ' in ': (a, b) => a in b,
-      'return': (a, b) => b,
-      'var': (a, b, obj, context, scope, bobj) => {
-          scope.declare(a, 'var', exec(b, scope, context));
-          return new Prop(scope.var, a, false, bobj && bobj.isGlobal);
-      },
-      'let': (a, b, obj, context, scope, bobj) => {
-          scope.declare(a, 'let', exec(b, scope, context), bobj && bobj.isGlobal);
-          return new Prop(scope.let, a, false, bobj && bobj.isGlobal);
-      },
-      'const': (a, b, obj, context, scope, bobj) => {
-          scope.declare(a, 'const', exec(b, scope, context));
-          return new Prop(scope.const, a, false, bobj && bobj.isGlobal);
-      },
-      'arrowFunc': (a, b, obj, context, scope) => {
-          return (...args) => {
-              const vars = {};
-              a.forEach((arg, i) => {
-                  vars[arg] = args[i];
-              });
-              return context.sandbox.executeTree({
-                  tree: b,
-                  strings: context.strings,
-                  literals: context.literals,
-              }, [new Scope(scope, vars)]).result;
-          };
-      }
+
+  var defineProperty$4 = objectDefineProperty.f;
+
+  var defineWellKnownSymbol = function (NAME) {
+    var Symbol = path.Symbol || (path.Symbol = {});
+    if (!has(Symbol, NAME)) defineProperty$4(Symbol, NAME, {
+      value: wellKnownSymbolWrapped.f(NAME)
+    });
   };
-  let ops = new Map();
-  for (let op in ops2) {
-      ops.set(op, ops2[op]);
-  }
-  let lispTypes = new Map();
-  let setLispType = (types, fn) => {
-      types.forEach((type) => {
-          lispTypes.set(type, fn);
-      });
+
+  var $forEach$1 = arrayIteration.forEach;
+
+  var HIDDEN = sharedKey('hidden');
+  var SYMBOL = 'Symbol';
+  var PROTOTYPE$1 = 'prototype';
+  var TO_PRIMITIVE = wellKnownSymbol('toPrimitive');
+  var setInternalState$2 = internalState.set;
+  var getInternalState$2 = internalState.getterFor(SYMBOL);
+  var ObjectPrototype$1 = Object[PROTOTYPE$1];
+  var $Symbol = global_1.Symbol;
+  var $stringify = getBuiltIn('JSON', 'stringify');
+  var nativeGetOwnPropertyDescriptor$1 = objectGetOwnPropertyDescriptor.f;
+  var nativeDefineProperty$1 = objectDefineProperty.f;
+  var nativeGetOwnPropertyNames$1 = objectGetOwnPropertyNamesExternal.f;
+  var nativePropertyIsEnumerable$1 = objectPropertyIsEnumerable.f;
+  var AllSymbols = shared('symbols');
+  var ObjectPrototypeSymbols = shared('op-symbols');
+  var StringToSymbolRegistry = shared('string-to-symbol-registry');
+  var SymbolToStringRegistry = shared('symbol-to-string-registry');
+  var WellKnownSymbolsStore$1 = shared('wks');
+  var QObject = global_1.QObject;
+  // Don't use setters in Qt Script, https://github.com/zloirock/core-js/issues/173
+  var USE_SETTER = !QObject || !QObject[PROTOTYPE$1] || !QObject[PROTOTYPE$1].findChild;
+
+  // fallback for old Android, https://code.google.com/p/v8/issues/detail?id=687
+  var setSymbolDescriptor = descriptors && fails(function () {
+    return objectCreate(nativeDefineProperty$1({}, 'a', {
+      get: function () { return nativeDefineProperty$1(this, 'a', { value: 7 }).a; }
+    })).a != 7;
+  }) ? function (O, P, Attributes) {
+    var ObjectPrototypeDescriptor = nativeGetOwnPropertyDescriptor$1(ObjectPrototype$1, P);
+    if (ObjectPrototypeDescriptor) delete ObjectPrototype$1[P];
+    nativeDefineProperty$1(O, P, Attributes);
+    if (ObjectPrototypeDescriptor && O !== ObjectPrototype$1) {
+      nativeDefineProperty$1(ObjectPrototype$1, P, ObjectPrototypeDescriptor);
+    }
+  } : nativeDefineProperty$1;
+
+  var wrap = function (tag, description) {
+    var symbol = AllSymbols[tag] = objectCreate($Symbol[PROTOTYPE$1]);
+    setInternalState$2(symbol, {
+      type: SYMBOL,
+      tag: tag,
+      description: description
+    });
+    if (!descriptors) symbol.description = description;
+    return symbol;
   };
-  setLispType(['createArray', 'createObject', 'group', 'arrayProp', 'call'], (type, part, res, expect, ctx) => {
-      let extract = "";
-      let closings = {
-          'createArray': ']',
-          'createObject': '}',
-          'group': ')',
-          'arrayProp': ']',
-          'call': ')'
+
+  var isSymbol = useSymbolAsUid ? function (it) {
+    return typeof it == 'symbol';
+  } : function (it) {
+    return Object(it) instanceof $Symbol;
+  };
+
+  var $defineProperty = function defineProperty(O, P, Attributes) {
+    if (O === ObjectPrototype$1) $defineProperty(ObjectPrototypeSymbols, P, Attributes);
+    anObject(O);
+    var key = toPrimitive(P, true);
+    anObject(Attributes);
+    if (has(AllSymbols, key)) {
+      if (!Attributes.enumerable) {
+        if (!has(O, HIDDEN)) nativeDefineProperty$1(O, HIDDEN, createPropertyDescriptor(1, {}));
+        O[HIDDEN][key] = true;
+      } else {
+        if (has(O, HIDDEN) && O[HIDDEN][key]) O[HIDDEN][key] = false;
+        Attributes = objectCreate(Attributes, { enumerable: createPropertyDescriptor(0, false) });
+      } return setSymbolDescriptor(O, key, Attributes);
+    } return nativeDefineProperty$1(O, key, Attributes);
+  };
+
+  var $defineProperties = function defineProperties(O, Properties) {
+    anObject(O);
+    var properties = toIndexedObject(Properties);
+    var keys = objectKeys(properties).concat($getOwnPropertySymbols(properties));
+    $forEach$1(keys, function (key) {
+      if (!descriptors || $propertyIsEnumerable.call(properties, key)) $defineProperty(O, key, properties[key]);
+    });
+    return O;
+  };
+
+  var $create = function create(O, Properties) {
+    return Properties === undefined ? objectCreate(O) : $defineProperties(objectCreate(O), Properties);
+  };
+
+  var $propertyIsEnumerable = function propertyIsEnumerable(V) {
+    var P = toPrimitive(V, true);
+    var enumerable = nativePropertyIsEnumerable$1.call(this, P);
+    if (this === ObjectPrototype$1 && has(AllSymbols, P) && !has(ObjectPrototypeSymbols, P)) return false;
+    return enumerable || !has(this, P) || !has(AllSymbols, P) || has(this, HIDDEN) && this[HIDDEN][P] ? enumerable : true;
+  };
+
+  var $getOwnPropertyDescriptor = function getOwnPropertyDescriptor(O, P) {
+    var it = toIndexedObject(O);
+    var key = toPrimitive(P, true);
+    if (it === ObjectPrototype$1 && has(AllSymbols, key) && !has(ObjectPrototypeSymbols, key)) return;
+    var descriptor = nativeGetOwnPropertyDescriptor$1(it, key);
+    if (descriptor && has(AllSymbols, key) && !(has(it, HIDDEN) && it[HIDDEN][key])) {
+      descriptor.enumerable = true;
+    }
+    return descriptor;
+  };
+
+  var $getOwnPropertyNames = function getOwnPropertyNames(O) {
+    var names = nativeGetOwnPropertyNames$1(toIndexedObject(O));
+    var result = [];
+    $forEach$1(names, function (key) {
+      if (!has(AllSymbols, key) && !has(hiddenKeys, key)) result.push(key);
+    });
+    return result;
+  };
+
+  var $getOwnPropertySymbols = function getOwnPropertySymbols(O) {
+    var IS_OBJECT_PROTOTYPE = O === ObjectPrototype$1;
+    var names = nativeGetOwnPropertyNames$1(IS_OBJECT_PROTOTYPE ? ObjectPrototypeSymbols : toIndexedObject(O));
+    var result = [];
+    $forEach$1(names, function (key) {
+      if (has(AllSymbols, key) && (!IS_OBJECT_PROTOTYPE || has(ObjectPrototype$1, key))) {
+        result.push(AllSymbols[key]);
+      }
+    });
+    return result;
+  };
+
+  // `Symbol` constructor
+  // https://tc39.github.io/ecma262/#sec-symbol-constructor
+  if (!nativeSymbol) {
+    $Symbol = function Symbol() {
+      if (this instanceof $Symbol) throw TypeError('Symbol is not a constructor');
+      var description = !arguments.length || arguments[0] === undefined ? undefined : String(arguments[0]);
+      var tag = uid(description);
+      var setter = function (value) {
+        if (this === ObjectPrototype$1) setter.call(ObjectPrototypeSymbols, value);
+        if (has(this, HIDDEN) && has(this[HIDDEN], tag)) this[HIDDEN][tag] = false;
+        setSymbolDescriptor(this, tag, createPropertyDescriptor(1, value));
       };
-      let arg = [];
-      let end = false;
-      let i = 1;
-      while (i < part.length && !end) {
-          extract = restOfExp(part.substring(i), [
-              new RegExp('^\\' + closings[type]),
-              /^,/
-          ]);
-          i += extract.length;
-          if (extract) {
-              arg.push(extract);
-          }
-          if (part[i] !== ',') {
-              end = true;
-          }
-          else {
-              i++;
-          }
-      }
-      const next = ['value', 'function', 'prop', 'exp', 'modifier', 'incrementerBefore'];
-      let l;
-      let fFound;
-      const reg2 = /^([a-zA-Z\$_][a-zA-Z\d\$_]*)\((([a-zA-Z\$_][a-zA-Z\d\$_]*,?)*)\)?{/;
-      switch (type) {
-          case 'group':
-          case 'arrayProp':
-              l = lispify(arg.pop());
-              break;
-          case 'call':
-          case 'createArray':
-              l = arg.map((e) => lispify(e, [...next, 'spreadArray']));
-              break;
-          case 'createObject':
-              l = arg.map((str) => {
-                  let value;
-                  let key;
-                  fFound = reg2.exec(str);
-                  if (fFound) {
-                      let args = fFound[2] ? fFound[2].split(",") : [];
-                      const func = restOfExp(str.substring(fFound.index + fFound[0].length), [/^}/]);
-                      return new ObjectFunc(fFound[1], args, Sandbox.parse(func, null).tree);
-                  }
-                  else {
-                      let extract = restOfExp(str, [/^:/]);
-                      key = lispify(extract, [...next, 'spreadObject']);
-                      if (key instanceof Lisp && key.op === 'prop') {
-                          key = key.b;
-                      }
-                      if (extract.length === str.length)
-                          return key;
-                      value = lispify(str.substring(extract.length + 1));
-                  }
-                  return new Lisp({
-                      op: 'keyVal',
-                      a: key,
-                      b: value
-                  });
-              });
-              break;
-      }
-      type = type === 'arrayProp' ? 'prop' : type;
-      ctx.lispTree = lispify(part.substring(i + 1), expectTypes[expect].next, new Lisp({
-          op: type,
-          a: ctx.lispTree,
-          b: l,
-      }));
-  });
-  setLispType(['op'], (type, part, res, expect, ctx) => {
-      let extract = restOfExp(part.substring(res[0].length));
-      ctx.lispTree = new Lisp({
-          op: res[0],
-          a: ctx.lispTree,
-          b: lispify(extract),
+      if (descriptors && USE_SETTER) setSymbolDescriptor(ObjectPrototype$1, tag, { configurable: true, set: setter });
+      return wrap(tag, description);
+    };
+
+    redefine($Symbol[PROTOTYPE$1], 'toString', function toString() {
+      return getInternalState$2(this).tag;
+    });
+
+    redefine($Symbol, 'withoutSetter', function (description) {
+      return wrap(uid(description), description);
+    });
+
+    objectPropertyIsEnumerable.f = $propertyIsEnumerable;
+    objectDefineProperty.f = $defineProperty;
+    objectGetOwnPropertyDescriptor.f = $getOwnPropertyDescriptor;
+    objectGetOwnPropertyNames.f = objectGetOwnPropertyNamesExternal.f = $getOwnPropertyNames;
+    objectGetOwnPropertySymbols.f = $getOwnPropertySymbols;
+
+    wellKnownSymbolWrapped.f = function (name) {
+      return wrap(wellKnownSymbol(name), name);
+    };
+
+    if (descriptors) {
+      // https://github.com/tc39/proposal-Symbol-description
+      nativeDefineProperty$1($Symbol[PROTOTYPE$1], 'description', {
+        configurable: true,
+        get: function description() {
+          return getInternalState$2(this).description;
+        }
       });
-      ctx.lispTree = lispify(part.substring(extract.length + res[0].length), restOfExp.next, ctx.lispTree);
-  });
-  setLispType(['inverse', 'not', 'negative', 'positive', 'typeof'], (type, part, res, expect, ctx) => {
-      let extract = restOfExp(part.substring(res[0].length));
-      ctx.lispTree = new Lisp({
-          op: ['positive', 'negative'].includes(type) ? '$' + res[0] : res[0],
-          a: ctx.lispTree,
-          b: lispify(extract, expectTypes[expect].next),
-      });
-      ctx.lispTree = lispify(part.substring(extract.length + res[0].length), restOfExp.next, ctx.lispTree);
-  });
-  setLispType(['incrementerBefore'], (type, part, res, expect, ctx) => {
-      let extract = restOfExp(part.substring(2));
-      ctx.lispTree = lispify(part.substring(extract.length + 2), restOfExp.next, new Lisp({
-          op: res[0] + "$",
-          a: lispify(extract, expectTypes[expect].next),
-      }));
-  });
-  setLispType(['incrementerAfter'], (type, part, res, expect, ctx) => {
-      ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, new Lisp({
-          op: "$" + res[0],
-          a: ctx.lispTree,
-      }));
-  });
-  setLispType(['assign', 'assignModify'], (type, part, res, expect, ctx) => {
-      ctx.lispTree = new Lisp({
-          op: res[0],
-          a: ctx.lispTree,
-          b: lispify(part.substring(res[0].length), expectTypes[expect].next)
-      });
-  });
-  setLispType(['split'], (type, part, res, expect, ctx) => {
-      let extract = restOfExp(part.substring(res[0].length), [
-          expectTypes.splitter.types.split,
-          expectTypes.if.types.if,
-          expectTypes.if.types.else
-      ]);
-      ctx.lispTree = new Lisp({
-          op: res[0],
-          a: ctx.lispTree,
-          b: lispify(extract, expectTypes[expect].next),
-      });
-      ctx.lispTree = lispify(part.substring(extract.length + res[0].length), restOfExp.next, ctx.lispTree);
-  });
-  setLispType(['if'], (type, part, res, expect, ctx) => {
-      let found = false;
-      let extract = "";
-      let quoteCount = 1;
-      while (!found && extract.length < part.length) {
-          extract += restOfExp(part.substring(extract.length + 1), [
-              expectTypes.if.types.if,
-              expectTypes.if.types.else
-          ]);
-          if (part[extract.length + 1] === '?') {
-              quoteCount++;
-          }
-          else {
-              quoteCount--;
-          }
-          if (!quoteCount) {
-              found = true;
-          }
-          else {
-              extract += part[extract.length + 1];
-          }
+      {
+        redefine(ObjectPrototype$1, 'propertyIsEnumerable', $propertyIsEnumerable, { unsafe: true });
       }
-      ctx.lispTree = new Lisp({
-          op: '?',
-          a: ctx.lispTree,
-          b: new Lisp({
-              op: ':',
-              a: lispify(extract),
-              b: lispify(part.substring(res[0].length + extract.length + 1))
-          })
-      });
-  });
-  setLispType(['dot', 'prop'], (type, part, res, expect, ctx) => {
-      let prop = res[0];
-      let index = res[0].length;
-      if (res[0] === '.') {
-          let matches = part.substring(res[0].length).match(expectTypes.prop.types.prop);
-          if (matches.length) {
-              prop = matches[0];
-              index = prop.length + res[0].length;
-          }
-          else {
-              throw Error('Hanging  dot:' + part);
-          }
-      }
-      ctx.lispTree = lispify(part.substring(index), expectTypes[expect].next, new Lisp({
-          op: 'prop',
-          a: ctx.lispTree,
-          b: prop
-      }));
-  });
-  setLispType(['spreadArray', 'spreadObject'], (type, part, res, expect, ctx) => {
-      ctx.lispTree = new Lisp({
-          op: type,
-          b: lispify(part.substring(res[0].length), expectTypes[expect].next)
-      });
-  });
-  setLispType(['number', 'boolean', 'null'], (type, part, res, expect, ctx) => {
-      ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, JSON.parse(res[0]));
-  });
-  setLispType(['und'], (type, part, res, expect, ctx) => {
-      ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, undefined);
-  });
-  setLispType(['NaN'], (type, part, res, expect, ctx) => {
-      ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, NaN);
-  });
-  setLispType(['Infinity'], (type, part, res, expect, ctx) => {
-      ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, Infinity);
-  });
-  setLispType(['string', 'literal'], (type, part, res, expect, ctx) => {
-      ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, new Lisp({
-          op: type,
-          b: parseInt(JSON.parse(res[1]), 10),
-      }));
-  });
-  setLispType(['return'], (type, part, res, expect, ctx) => {
-      ctx.lispTree = new Lisp({
-          op: 'return',
-          b: lispify(part.substring(res[0].length), expectTypes[expect].next)
-      });
-  });
-  setLispType(['initialize'], (type, part, res, expect, ctx) => {
-      const split = res[0].split(/ /g);
-      if (part.length === res[0].length) {
-          ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, new Lisp({
-              op: split[1],
-              a: split[2]
-          }));
-      }
-      else {
-          ctx.lispTree = new Lisp({
-              op: split[1],
-              a: split[2],
-              b: lispify(part.substring(res[0].length + 1), expectTypes[expect].next)
-          });
-      }
-  });
-  setLispType(['arrowFunc'], (type, part, res, expect, ctx) => {
-      let args = res[1] ? res[1].split(",") : [];
-      if (res[3]) {
-          if (res[0][0] !== '(')
-              throw new SyntaxError('Unstarted inline function brackets: ' + res[0]);
-      }
-      else if (args.length) {
-          args = [args.pop()];
-      }
-      const func = (res[4] ? '' : ' return ') + restOfExp(part.substring(res[0].length), res[4] ? [/^}/] : [/^[,;\)\}\]]/]);
-      ctx.lispTree = lispify(part.substring(res[0].length + func.length + 1), expectTypes[expect].next, new Lisp({
-          op: 'arrowFunc',
-          a: args,
-          b: Sandbox.parse(func, null).tree
-      }));
-  });
-  function lispify(part, expected, lispTree) {
-      expected = expected || ['initialize', 'expStart', 'value', 'function', 'prop', 'exp', 'modifier', 'incrementerBefore', 'expEnd'];
-      if (part === undefined)
-          return lispTree;
-      if (!part.length && !expected.includes('expEnd')) {
-          throw new SyntaxError("Unexpected end of expression");
-      }
-      let ctx = { lispTree: lispTree };
-      let res;
-      for (let expect of expected) {
-          if (expect === 'expEnd') {
-              continue;
-          }
-          if (expectTypes[expect].firstChar.has(part[0]) && !res) {
-              for (let type in expectTypes[expect].types) {
-                  if (type === 'expEnd') {
-                      continue;
-                  }
-                  if (res = expectTypes[expect].types[type].exec(part)) {
-                      lispTypes.get(type)(type, part, res, expect, ctx);
-                      break;
-                  }
-              }
-          }
-          if (res)
-              break;
-      }
-      if (!res && part.length) {
-          throw Error("Unexpected token: " + part);
-      }
-      return ctx.lispTree;
+    }
   }
-  function exec(tree, scope, context) {
-      if (tree instanceof Prop) {
-          return tree.context[tree.prop];
+
+  _export({ global: true, wrap: true, forced: !nativeSymbol, sham: !nativeSymbol }, {
+    Symbol: $Symbol
+  });
+
+  $forEach$1(objectKeys(WellKnownSymbolsStore$1), function (name) {
+    defineWellKnownSymbol(name);
+  });
+
+  _export({ target: SYMBOL, stat: true, forced: !nativeSymbol }, {
+    // `Symbol.for` method
+    // https://tc39.github.io/ecma262/#sec-symbol.for
+    'for': function (key) {
+      var string = String(key);
+      if (has(StringToSymbolRegistry, string)) return StringToSymbolRegistry[string];
+      var symbol = $Symbol(string);
+      StringToSymbolRegistry[string] = symbol;
+      SymbolToStringRegistry[symbol] = string;
+      return symbol;
+    },
+    // `Symbol.keyFor` method
+    // https://tc39.github.io/ecma262/#sec-symbol.keyfor
+    keyFor: function keyFor(sym) {
+      if (!isSymbol(sym)) throw TypeError(sym + ' is not a symbol');
+      if (has(SymbolToStringRegistry, sym)) return SymbolToStringRegistry[sym];
+    },
+    useSetter: function () { USE_SETTER = true; },
+    useSimple: function () { USE_SETTER = false; }
+  });
+
+  _export({ target: 'Object', stat: true, forced: !nativeSymbol, sham: !descriptors }, {
+    // `Object.create` method
+    // https://tc39.github.io/ecma262/#sec-object.create
+    create: $create,
+    // `Object.defineProperty` method
+    // https://tc39.github.io/ecma262/#sec-object.defineproperty
+    defineProperty: $defineProperty,
+    // `Object.defineProperties` method
+    // https://tc39.github.io/ecma262/#sec-object.defineproperties
+    defineProperties: $defineProperties,
+    // `Object.getOwnPropertyDescriptor` method
+    // https://tc39.github.io/ecma262/#sec-object.getownpropertydescriptors
+    getOwnPropertyDescriptor: $getOwnPropertyDescriptor
+  });
+
+  _export({ target: 'Object', stat: true, forced: !nativeSymbol }, {
+    // `Object.getOwnPropertyNames` method
+    // https://tc39.github.io/ecma262/#sec-object.getownpropertynames
+    getOwnPropertyNames: $getOwnPropertyNames,
+    // `Object.getOwnPropertySymbols` method
+    // https://tc39.github.io/ecma262/#sec-object.getownpropertysymbols
+    getOwnPropertySymbols: $getOwnPropertySymbols
+  });
+
+  // Chrome 38 and 39 `Object.getOwnPropertySymbols` fails on primitives
+  // https://bugs.chromium.org/p/v8/issues/detail?id=3443
+  _export({ target: 'Object', stat: true, forced: fails(function () { objectGetOwnPropertySymbols.f(1); }) }, {
+    getOwnPropertySymbols: function getOwnPropertySymbols(it) {
+      return objectGetOwnPropertySymbols.f(toObject(it));
+    }
+  });
+
+  // `JSON.stringify` method behavior with symbols
+  // https://tc39.github.io/ecma262/#sec-json.stringify
+  if ($stringify) {
+    var FORCED_JSON_STRINGIFY = !nativeSymbol || fails(function () {
+      var symbol = $Symbol();
+      // MS Edge converts symbol values to JSON as {}
+      return $stringify([symbol]) != '[null]'
+        // WebKit converts symbol values to JSON as null
+        || $stringify({ a: symbol }) != '{}'
+        // V8 throws on boxed symbols
+        || $stringify(Object(symbol)) != '{}';
+    });
+
+    _export({ target: 'JSON', stat: true, forced: FORCED_JSON_STRINGIFY }, {
+      // eslint-disable-next-line no-unused-vars
+      stringify: function stringify(it, replacer, space) {
+        var args = [it];
+        var index = 1;
+        var $replacer;
+        while (arguments.length > index) args.push(arguments[index++]);
+        $replacer = replacer;
+        if (!isObject(replacer) && it === undefined || isSymbol(it)) return; // IE8 returns string on undefined
+        if (!isArray(replacer)) replacer = function (key, value) {
+          if (typeof $replacer == 'function') value = $replacer.call(this, key, value);
+          if (!isSymbol(value)) return value;
+        };
+        args[1] = replacer;
+        return $stringify.apply(null, args);
       }
-      if (Array.isArray(tree)) {
-          return tree.map((item) => exec(item, scope, context));
-      }
-      if (!(tree instanceof Lisp)) {
-          return tree;
-      }
-      if (tree.op === 'arrowFunc') {
-          return ops.get(tree.op)(tree.a, tree.b, undefined, context, scope);
-      }
-      let obj = exec(tree.a, scope, context);
-      let a = obj instanceof Prop ? (obj.context ? obj.context[obj.prop] : undefined) : obj;
-      let bobj = exec(tree.b, scope, context);
-      let b = bobj instanceof Prop ? (bobj.context ? bobj.context[bobj.prop] : undefined) : bobj;
-      if (ops.has(tree.op)) {
-          let res = ops.get(tree.op)(a, b, obj, context, scope, bobj);
-          return res;
-      }
-      throw new SyntaxError('Unknown operator: ' + tree.op);
+    });
   }
-  let optimizeTypes = {};
-  let setOptimizeType = (types, fn) => {
-      types.forEach((type) => {
-          optimizeTypes[type] = fn;
-      });
+
+  // `Symbol.prototype[@@toPrimitive]` method
+  // https://tc39.github.io/ecma262/#sec-symbol.prototype-@@toprimitive
+  if (!$Symbol[PROTOTYPE$1][TO_PRIMITIVE]) {
+    createNonEnumerableProperty($Symbol[PROTOTYPE$1], TO_PRIMITIVE, $Symbol[PROTOTYPE$1].valueOf);
+  }
+  // `Symbol.prototype[@@toStringTag]` property
+  // https://tc39.github.io/ecma262/#sec-symbol.prototype-@@tostringtag
+  setToStringTag($Symbol, SYMBOL);
+
+  hiddenKeys[HIDDEN] = true;
+
+  var defineProperty$5 = objectDefineProperty.f;
+
+
+  var NativeSymbol = global_1.Symbol;
+
+  if (descriptors && typeof NativeSymbol == 'function' && (!('description' in NativeSymbol.prototype) ||
+    // Safari 12 bug
+    NativeSymbol().description !== undefined
+  )) {
+    var EmptyStringDescriptionStore = {};
+    // wrap Symbol constructor for correct work with undefined description
+    var SymbolWrapper = function Symbol() {
+      var description = arguments.length < 1 || arguments[0] === undefined ? undefined : String(arguments[0]);
+      var result = this instanceof SymbolWrapper
+        ? new NativeSymbol(description)
+        // in Edge 13, String(Symbol(undefined)) === 'Symbol(undefined)'
+        : description === undefined ? NativeSymbol() : NativeSymbol(description);
+      if (description === '') EmptyStringDescriptionStore[result] = true;
+      return result;
+    };
+    copyConstructorProperties(SymbolWrapper, NativeSymbol);
+    var symbolPrototype = SymbolWrapper.prototype = NativeSymbol.prototype;
+    symbolPrototype.constructor = SymbolWrapper;
+
+    var symbolToString = symbolPrototype.toString;
+    var native = String(NativeSymbol('test')) == 'Symbol(test)';
+    var regexp = /^Symbol\((.*)\)[^)]+$/;
+    defineProperty$5(symbolPrototype, 'description', {
+      configurable: true,
+      get: function description() {
+        var symbol = isObject(this) ? this.valueOf() : this;
+        var string = symbolToString.call(symbol);
+        if (has(EmptyStringDescriptionStore, symbol)) return '';
+        var desc = native ? string.slice(7, -1) : string.replace(regexp, '$1');
+        return desc === '' ? undefined : desc;
+      }
+    });
+
+    _export({ global: true, forced: true }, {
+      Symbol: SymbolWrapper
+    });
+  }
+
+  // `Symbol.iterator` well-known symbol
+  // https://tc39.github.io/ecma262/#sec-symbol.iterator
+  defineWellKnownSymbol('iterator');
+
+  // `FlattenIntoArray` abstract operation
+  // https://tc39.github.io/proposal-flatMap/#sec-FlattenIntoArray
+  var flattenIntoArray = function (target, original, source, sourceLen, start, depth, mapper, thisArg) {
+    var targetIndex = start;
+    var sourceIndex = 0;
+    var mapFn = mapper ? functionBindContext(mapper, thisArg, 3) : false;
+    var element;
+
+    while (sourceIndex < sourceLen) {
+      if (sourceIndex in source) {
+        element = mapFn ? mapFn(source[sourceIndex], sourceIndex, original) : source[sourceIndex];
+
+        if (depth > 0 && isArray(element)) {
+          targetIndex = flattenIntoArray(target, original, element, toLength(element.length), targetIndex, depth - 1) - 1;
+        } else {
+          if (targetIndex >= 0x1FFFFFFFFFFFFF) throw TypeError('Exceed the acceptable array length');
+          target[targetIndex] = element;
+        }
+
+        targetIndex++;
+      }
+      sourceIndex++;
+    }
+    return targetIndex;
   };
-  setOptimizeType(['>',
-      '<',
-      '>=',
-      '<=',
-      '==',
-      '===',
-      '!=',
-      '!==',
-      '&&',
-      '||',
-      '&',
-      '|',
-      '+',
-      '-',
-      '/',
-      '*',
-      '**',
-      '%',
-      '$+',
-      '$-',
-      '!',
-      '~',
-      'group'], (tree) => ops.get(tree.op)(tree.a, tree.b));
-  // setOptimizeType(['string'], (tree, strings) => strings[tree.b as number]);
+
+  var flattenIntoArray_1 = flattenIntoArray;
+
+  // `Array.prototype.flat` method
+  // https://github.com/tc39/proposal-flatMap
+  _export({ target: 'Array', proto: true }, {
+    flat: function flat(/* depthArg = 1 */) {
+      var depthArg = arguments.length ? arguments[0] : undefined;
+      var O = toObject(this);
+      var sourceLen = toLength(O.length);
+      var A = arraySpeciesCreate(O, 0);
+      A.length = flattenIntoArray_1(A, O, O, sourceLen, 0, depthArg === undefined ? 1 : toInteger(depthArg));
+      return A;
+    }
+  });
+
+  var ARRAY_ITERATOR = 'Array Iterator';
+  var setInternalState$3 = internalState.set;
+  var getInternalState$3 = internalState.getterFor(ARRAY_ITERATOR);
+
+  // `Array.prototype.entries` method
+  // https://tc39.github.io/ecma262/#sec-array.prototype.entries
+  // `Array.prototype.keys` method
+  // https://tc39.github.io/ecma262/#sec-array.prototype.keys
+  // `Array.prototype.values` method
+  // https://tc39.github.io/ecma262/#sec-array.prototype.values
+  // `Array.prototype[@@iterator]` method
+  // https://tc39.github.io/ecma262/#sec-array.prototype-@@iterator
+  // `CreateArrayIterator` internal method
+  // https://tc39.github.io/ecma262/#sec-createarrayiterator
+  var es_array_iterator = defineIterator(Array, 'Array', function (iterated, kind) {
+    setInternalState$3(this, {
+      type: ARRAY_ITERATOR,
+      target: toIndexedObject(iterated), // target
+      index: 0,                          // next index
+      kind: kind                         // kind
+    });
+  // `%ArrayIteratorPrototype%.next` method
+  // https://tc39.github.io/ecma262/#sec-%arrayiteratorprototype%.next
+  }, function () {
+    var state = getInternalState$3(this);
+    var target = state.target;
+    var kind = state.kind;
+    var index = state.index++;
+    if (!target || index >= target.length) {
+      state.target = undefined;
+      return { value: undefined, done: true };
+    }
+    if (kind == 'keys') return { value: index, done: false };
+    if (kind == 'values') return { value: target[index], done: false };
+    return { value: [index, target[index]], done: false };
+  }, 'values');
+
+  // argumentsList[@@iterator] is %ArrayProto_values%
+  // https://tc39.github.io/ecma262/#sec-createunmappedargumentsobject
+  // https://tc39.github.io/ecma262/#sec-createmappedargumentsobject
+  iterators.Arguments = iterators.Array;
+
+  // https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
+  addToUnscopables('keys');
+  addToUnscopables('values');
+  addToUnscopables('entries');
+
+  // this method was added to unscopables after implementation
+  // in popular engines, so it's moved to a separate module
+
+
+  addToUnscopables('flat');
+
+  var freezing = !fails(function () {
+    return Object.isExtensible(Object.preventExtensions({}));
+  });
+
+  var internalMetadata = createCommonjsModule(function (module) {
+  var defineProperty = objectDefineProperty.f;
+
+
+
+  var METADATA = uid('meta');
+  var id = 0;
+
+  var isExtensible = Object.isExtensible || function () {
+    return true;
+  };
+
+  var setMetadata = function (it) {
+    defineProperty(it, METADATA, { value: {
+      objectID: 'O' + ++id, // object ID
+      weakData: {}          // weak collections IDs
+    } });
+  };
+
+  var fastKey = function (it, create) {
+    // return a primitive with prefix
+    if (!isObject(it)) return typeof it == 'symbol' ? it : (typeof it == 'string' ? 'S' : 'P') + it;
+    if (!has(it, METADATA)) {
+      // can't set metadata to uncaught frozen object
+      if (!isExtensible(it)) return 'F';
+      // not necessary to add metadata
+      if (!create) return 'E';
+      // add missing metadata
+      setMetadata(it);
+    // return object ID
+    } return it[METADATA].objectID;
+  };
+
+  var getWeakData = function (it, create) {
+    if (!has(it, METADATA)) {
+      // can't set metadata to uncaught frozen object
+      if (!isExtensible(it)) return true;
+      // not necessary to add metadata
+      if (!create) return false;
+      // add missing metadata
+      setMetadata(it);
+    // return the store of weak collections IDs
+    } return it[METADATA].weakData;
+  };
+
+  // add metadata on freeze-family methods calling
+  var onFreeze = function (it) {
+    if (freezing && meta.REQUIRED && isExtensible(it) && !has(it, METADATA)) setMetadata(it);
+    return it;
+  };
+
+  var meta = module.exports = {
+    REQUIRED: false,
+    fastKey: fastKey,
+    getWeakData: getWeakData,
+    onFreeze: onFreeze
+  };
+
+  hiddenKeys[METADATA] = true;
+  });
+  var internalMetadata_1 = internalMetadata.REQUIRED;
+  var internalMetadata_2 = internalMetadata.fastKey;
+  var internalMetadata_3 = internalMetadata.getWeakData;
+  var internalMetadata_4 = internalMetadata.onFreeze;
+
+  var collection = function (CONSTRUCTOR_NAME, wrapper, common) {
+    var IS_MAP = CONSTRUCTOR_NAME.indexOf('Map') !== -1;
+    var IS_WEAK = CONSTRUCTOR_NAME.indexOf('Weak') !== -1;
+    var ADDER = IS_MAP ? 'set' : 'add';
+    var NativeConstructor = global_1[CONSTRUCTOR_NAME];
+    var NativePrototype = NativeConstructor && NativeConstructor.prototype;
+    var Constructor = NativeConstructor;
+    var exported = {};
+
+    var fixMethod = function (KEY) {
+      var nativeMethod = NativePrototype[KEY];
+      redefine(NativePrototype, KEY,
+        KEY == 'add' ? function add(value) {
+          nativeMethod.call(this, value === 0 ? 0 : value);
+          return this;
+        } : KEY == 'delete' ? function (key) {
+          return IS_WEAK && !isObject(key) ? false : nativeMethod.call(this, key === 0 ? 0 : key);
+        } : KEY == 'get' ? function get(key) {
+          return IS_WEAK && !isObject(key) ? undefined : nativeMethod.call(this, key === 0 ? 0 : key);
+        } : KEY == 'has' ? function has(key) {
+          return IS_WEAK && !isObject(key) ? false : nativeMethod.call(this, key === 0 ? 0 : key);
+        } : function set(key, value) {
+          nativeMethod.call(this, key === 0 ? 0 : key, value);
+          return this;
+        }
+      );
+    };
+
+    // eslint-disable-next-line max-len
+    if (isForced_1(CONSTRUCTOR_NAME, typeof NativeConstructor != 'function' || !(IS_WEAK || NativePrototype.forEach && !fails(function () {
+      new NativeConstructor().entries().next();
+    })))) {
+      // create collection constructor
+      Constructor = common.getConstructor(wrapper, CONSTRUCTOR_NAME, IS_MAP, ADDER);
+      internalMetadata.REQUIRED = true;
+    } else if (isForced_1(CONSTRUCTOR_NAME, true)) {
+      var instance = new Constructor();
+      // early implementations not supports chaining
+      var HASNT_CHAINING = instance[ADDER](IS_WEAK ? {} : -0, 1) != instance;
+      // V8 ~ Chromium 40- weak-collections throws on primitives, but should return false
+      var THROWS_ON_PRIMITIVES = fails(function () { instance.has(1); });
+      // most early implementations doesn't supports iterables, most modern - not close it correctly
+      // eslint-disable-next-line no-new
+      var ACCEPT_ITERABLES = checkCorrectnessOfIteration(function (iterable) { new NativeConstructor(iterable); });
+      // for early implementations -0 and +0 not the same
+      var BUGGY_ZERO = !IS_WEAK && fails(function () {
+        // V8 ~ Chromium 42- fails only with 5+ elements
+        var $instance = new NativeConstructor();
+        var index = 5;
+        while (index--) $instance[ADDER](index, index);
+        return !$instance.has(-0);
+      });
+
+      if (!ACCEPT_ITERABLES) {
+        Constructor = wrapper(function (dummy, iterable) {
+          anInstance(dummy, Constructor, CONSTRUCTOR_NAME);
+          var that = inheritIfRequired(new NativeConstructor(), dummy, Constructor);
+          if (iterable != undefined) iterate_1(iterable, that[ADDER], that, IS_MAP);
+          return that;
+        });
+        Constructor.prototype = NativePrototype;
+        NativePrototype.constructor = Constructor;
+      }
+
+      if (THROWS_ON_PRIMITIVES || BUGGY_ZERO) {
+        fixMethod('delete');
+        fixMethod('has');
+        IS_MAP && fixMethod('get');
+      }
+
+      if (BUGGY_ZERO || HASNT_CHAINING) fixMethod(ADDER);
+
+      // weak collections should not contains .clear method
+      if (IS_WEAK && NativePrototype.clear) delete NativePrototype.clear;
+    }
+
+    exported[CONSTRUCTOR_NAME] = Constructor;
+    _export({ global: true, forced: Constructor != NativeConstructor }, exported);
+
+    setToStringTag(Constructor, CONSTRUCTOR_NAME);
+
+    if (!IS_WEAK) common.setStrong(Constructor, CONSTRUCTOR_NAME, IS_MAP);
+
+    return Constructor;
+  };
+
+  var defineProperty$6 = objectDefineProperty.f;
+
+
+
+
+
+
+
+
+  var fastKey = internalMetadata.fastKey;
+
+
+  var setInternalState$4 = internalState.set;
+  var internalStateGetterFor = internalState.getterFor;
+
+  var collectionStrong = {
+    getConstructor: function (wrapper, CONSTRUCTOR_NAME, IS_MAP, ADDER) {
+      var C = wrapper(function (that, iterable) {
+        anInstance(that, C, CONSTRUCTOR_NAME);
+        setInternalState$4(that, {
+          type: CONSTRUCTOR_NAME,
+          index: objectCreate(null),
+          first: undefined,
+          last: undefined,
+          size: 0
+        });
+        if (!descriptors) that.size = 0;
+        if (iterable != undefined) iterate_1(iterable, that[ADDER], that, IS_MAP);
+      });
+
+      var getInternalState = internalStateGetterFor(CONSTRUCTOR_NAME);
+
+      var define = function (that, key, value) {
+        var state = getInternalState(that);
+        var entry = getEntry(that, key);
+        var previous, index;
+        // change existing entry
+        if (entry) {
+          entry.value = value;
+        // create new entry
+        } else {
+          state.last = entry = {
+            index: index = fastKey(key, true),
+            key: key,
+            value: value,
+            previous: previous = state.last,
+            next: undefined,
+            removed: false
+          };
+          if (!state.first) state.first = entry;
+          if (previous) previous.next = entry;
+          if (descriptors) state.size++;
+          else that.size++;
+          // add to index
+          if (index !== 'F') state.index[index] = entry;
+        } return that;
+      };
+
+      var getEntry = function (that, key) {
+        var state = getInternalState(that);
+        // fast case
+        var index = fastKey(key);
+        var entry;
+        if (index !== 'F') return state.index[index];
+        // frozen object case
+        for (entry = state.first; entry; entry = entry.next) {
+          if (entry.key == key) return entry;
+        }
+      };
+
+      redefineAll(C.prototype, {
+        // 23.1.3.1 Map.prototype.clear()
+        // 23.2.3.2 Set.prototype.clear()
+        clear: function clear() {
+          var that = this;
+          var state = getInternalState(that);
+          var data = state.index;
+          var entry = state.first;
+          while (entry) {
+            entry.removed = true;
+            if (entry.previous) entry.previous = entry.previous.next = undefined;
+            delete data[entry.index];
+            entry = entry.next;
+          }
+          state.first = state.last = undefined;
+          if (descriptors) state.size = 0;
+          else that.size = 0;
+        },
+        // 23.1.3.3 Map.prototype.delete(key)
+        // 23.2.3.4 Set.prototype.delete(value)
+        'delete': function (key) {
+          var that = this;
+          var state = getInternalState(that);
+          var entry = getEntry(that, key);
+          if (entry) {
+            var next = entry.next;
+            var prev = entry.previous;
+            delete state.index[entry.index];
+            entry.removed = true;
+            if (prev) prev.next = next;
+            if (next) next.previous = prev;
+            if (state.first == entry) state.first = next;
+            if (state.last == entry) state.last = prev;
+            if (descriptors) state.size--;
+            else that.size--;
+          } return !!entry;
+        },
+        // 23.2.3.6 Set.prototype.forEach(callbackfn, thisArg = undefined)
+        // 23.1.3.5 Map.prototype.forEach(callbackfn, thisArg = undefined)
+        forEach: function forEach(callbackfn /* , that = undefined */) {
+          var state = getInternalState(this);
+          var boundFunction = functionBindContext(callbackfn, arguments.length > 1 ? arguments[1] : undefined, 3);
+          var entry;
+          while (entry = entry ? entry.next : state.first) {
+            boundFunction(entry.value, entry.key, this);
+            // revert to the last existing entry
+            while (entry && entry.removed) entry = entry.previous;
+          }
+        },
+        // 23.1.3.7 Map.prototype.has(key)
+        // 23.2.3.7 Set.prototype.has(value)
+        has: function has(key) {
+          return !!getEntry(this, key);
+        }
+      });
+
+      redefineAll(C.prototype, IS_MAP ? {
+        // 23.1.3.6 Map.prototype.get(key)
+        get: function get(key) {
+          var entry = getEntry(this, key);
+          return entry && entry.value;
+        },
+        // 23.1.3.9 Map.prototype.set(key, value)
+        set: function set(key, value) {
+          return define(this, key === 0 ? 0 : key, value);
+        }
+      } : {
+        // 23.2.3.1 Set.prototype.add(value)
+        add: function add(value) {
+          return define(this, value = value === 0 ? 0 : value, value);
+        }
+      });
+      if (descriptors) defineProperty$6(C.prototype, 'size', {
+        get: function () {
+          return getInternalState(this).size;
+        }
+      });
+      return C;
+    },
+    setStrong: function (C, CONSTRUCTOR_NAME, IS_MAP) {
+      var ITERATOR_NAME = CONSTRUCTOR_NAME + ' Iterator';
+      var getInternalCollectionState = internalStateGetterFor(CONSTRUCTOR_NAME);
+      var getInternalIteratorState = internalStateGetterFor(ITERATOR_NAME);
+      // add .keys, .values, .entries, [@@iterator]
+      // 23.1.3.4, 23.1.3.8, 23.1.3.11, 23.1.3.12, 23.2.3.5, 23.2.3.8, 23.2.3.10, 23.2.3.11
+      defineIterator(C, CONSTRUCTOR_NAME, function (iterated, kind) {
+        setInternalState$4(this, {
+          type: ITERATOR_NAME,
+          target: iterated,
+          state: getInternalCollectionState(iterated),
+          kind: kind,
+          last: undefined
+        });
+      }, function () {
+        var state = getInternalIteratorState(this);
+        var kind = state.kind;
+        var entry = state.last;
+        // revert to the last existing entry
+        while (entry && entry.removed) entry = entry.previous;
+        // get next entry
+        if (!state.target || !(state.last = entry = entry ? entry.next : state.state.first)) {
+          // or finish the iteration
+          state.target = undefined;
+          return { value: undefined, done: true };
+        }
+        // return step by kind
+        if (kind == 'keys') return { value: entry.key, done: false };
+        if (kind == 'values') return { value: entry.value, done: false };
+        return { value: [entry.key, entry.value], done: false };
+      }, IS_MAP ? 'entries' : 'values', !IS_MAP, true);
+
+      // add [@@species], 23.1.2.2, 23.2.2.2
+      setSpecies(CONSTRUCTOR_NAME);
+    }
+  };
+
+  // `Map` constructor
+  // https://tc39.github.io/ecma262/#sec-map-objects
+  var es_map = collection('Map', function (init) {
+    return function Map() { return init(this, arguments.length ? arguments[0] : undefined); };
+  }, collectionStrong);
+
+  var nativeAssign = Object.assign;
+  var defineProperty$7 = Object.defineProperty;
+
+  // `Object.assign` method
+  // https://tc39.github.io/ecma262/#sec-object.assign
+  var objectAssign = !nativeAssign || fails(function () {
+    // should have correct order of operations (Edge bug)
+    if (descriptors && nativeAssign({ b: 1 }, nativeAssign(defineProperty$7({}, 'a', {
+      enumerable: true,
+      get: function () {
+        defineProperty$7(this, 'b', {
+          value: 3,
+          enumerable: false
+        });
+      }
+    }), { b: 2 })).b !== 1) return true;
+    // should work with symbols and should have deterministic property order (V8 bug)
+    var A = {};
+    var B = {};
+    // eslint-disable-next-line no-undef
+    var symbol = Symbol();
+    var alphabet = 'abcdefghijklmnopqrst';
+    A[symbol] = 7;
+    alphabet.split('').forEach(function (chr) { B[chr] = chr; });
+    return nativeAssign({}, A)[symbol] != 7 || objectKeys(nativeAssign({}, B)).join('') != alphabet;
+  }) ? function assign(target, source) { // eslint-disable-line no-unused-vars
+    var T = toObject(target);
+    var argumentsLength = arguments.length;
+    var index = 1;
+    var getOwnPropertySymbols = objectGetOwnPropertySymbols.f;
+    var propertyIsEnumerable = objectPropertyIsEnumerable.f;
+    while (argumentsLength > index) {
+      var S = indexedObject(arguments[index++]);
+      var keys = getOwnPropertySymbols ? objectKeys(S).concat(getOwnPropertySymbols(S)) : objectKeys(S);
+      var length = keys.length;
+      var j = 0;
+      var key;
+      while (length > j) {
+        key = keys[j++];
+        if (!descriptors || propertyIsEnumerable.call(S, key)) T[key] = S[key];
+      }
+    } return T;
+  } : nativeAssign;
+
+  // `Object.assign` method
+  // https://tc39.github.io/ecma262/#sec-object.assign
+  _export({ target: 'Object', stat: true, forced: Object.assign !== objectAssign }, {
+    assign: objectAssign
+  });
+
+  var FAILS_ON_PRIMITIVES$1 = fails(function () { objectGetPrototypeOf(1); });
+
+  // `Object.getPrototypeOf` method
+  // https://tc39.github.io/ecma262/#sec-object.getprototypeof
+  _export({ target: 'Object', stat: true, forced: FAILS_ON_PRIMITIVES$1, sham: !correctPrototypeGetter }, {
+    getPrototypeOf: function getPrototypeOf(it) {
+      return objectGetPrototypeOf(toObject(it));
+    }
+  });
+
+  var defineProperty$8 = objectDefineProperty.f;
+  var getOwnPropertyNames$1 = objectGetOwnPropertyNames.f;
+
+
+
+
+
+  var setInternalState$5 = internalState.set;
+
+
+
+  var MATCH$2 = wellKnownSymbol('match');
+  var NativeRegExp = global_1.RegExp;
+  var RegExpPrototype = NativeRegExp.prototype;
+  var re1 = /a/g;
+  var re2 = /a/g;
+
+  // "new" should create a new object, old webkit bug
+  var CORRECT_NEW = new NativeRegExp(re1) !== re1;
+
+  var UNSUPPORTED_Y$2 = regexpStickyHelpers.UNSUPPORTED_Y;
+
+  var FORCED$2 = descriptors && isForced_1('RegExp', (!CORRECT_NEW || UNSUPPORTED_Y$2 || fails(function () {
+    re2[MATCH$2] = false;
+    // RegExp constructor can alter flags and IsRegExp works correct with @@match
+    return NativeRegExp(re1) != re1 || NativeRegExp(re2) == re2 || NativeRegExp(re1, 'i') != '/a/i';
+  })));
+
+  // `RegExp` constructor
+  // https://tc39.github.io/ecma262/#sec-regexp-constructor
+  if (FORCED$2) {
+    var RegExpWrapper = function RegExp(pattern, flags) {
+      var thisIsRegExp = this instanceof RegExpWrapper;
+      var patternIsRegExp = isRegexp(pattern);
+      var flagsAreUndefined = flags === undefined;
+      var sticky;
+
+      if (!thisIsRegExp && patternIsRegExp && pattern.constructor === RegExpWrapper && flagsAreUndefined) {
+        return pattern;
+      }
+
+      if (CORRECT_NEW) {
+        if (patternIsRegExp && !flagsAreUndefined) pattern = pattern.source;
+      } else if (pattern instanceof RegExpWrapper) {
+        if (flagsAreUndefined) flags = regexpFlags.call(pattern);
+        pattern = pattern.source;
+      }
+
+      if (UNSUPPORTED_Y$2) {
+        sticky = !!flags && flags.indexOf('y') > -1;
+        if (sticky) flags = flags.replace(/y/g, '');
+      }
+
+      var result = inheritIfRequired(
+        CORRECT_NEW ? new NativeRegExp(pattern, flags) : NativeRegExp(pattern, flags),
+        thisIsRegExp ? this : RegExpPrototype,
+        RegExpWrapper
+      );
+
+      if (UNSUPPORTED_Y$2 && sticky) setInternalState$5(result, { sticky: sticky });
+
+      return result;
+    };
+    var proxy = function (key) {
+      key in RegExpWrapper || defineProperty$8(RegExpWrapper, key, {
+        configurable: true,
+        get: function () { return NativeRegExp[key]; },
+        set: function (it) { NativeRegExp[key] = it; }
+      });
+    };
+    var keys$2 = getOwnPropertyNames$1(NativeRegExp);
+    var index = 0;
+    while (keys$2.length > index) proxy(keys$2[index++]);
+    RegExpPrototype.constructor = RegExpWrapper;
+    RegExpWrapper.prototype = RegExpPrototype;
+    redefine(global_1, 'RegExp', RegExpWrapper);
+  }
+
+  // https://tc39.github.io/ecma262/#sec-get-regexp-@@species
+  setSpecies('RegExp');
+
+  var TO_STRING = 'toString';
+  var RegExpPrototype$1 = RegExp.prototype;
+  var nativeToString = RegExpPrototype$1[TO_STRING];
+
+  var NOT_GENERIC = fails(function () { return nativeToString.call({ source: 'a', flags: 'b' }) != '/a/b'; });
+  // FF44- RegExp#toString has a wrong name
+  var INCORRECT_NAME = nativeToString.name != TO_STRING;
+
+  // `RegExp.prototype.toString` method
+  // https://tc39.github.io/ecma262/#sec-regexp.prototype.tostring
+  if (NOT_GENERIC || INCORRECT_NAME) {
+    redefine(RegExp.prototype, TO_STRING, function toString() {
+      var R = anObject(this);
+      var p = String(R.source);
+      var rf = R.flags;
+      var f = String(rf === undefined && R instanceof RegExp && !('flags' in RegExpPrototype$1) ? regexpFlags.call(R) : rf);
+      return '/' + p + '/' + f;
+    }, { unsafe: true });
+  }
+
+  // `Set` constructor
+  // https://tc39.github.io/ecma262/#sec-set-objects
+  var es_set = collection('Set', function (init) {
+    return function Set() { return init(this, arguments.length ? arguments[0] : undefined); };
+  }, collectionStrong);
+
+  var arrayBufferNative = typeof ArrayBuffer !== 'undefined' && typeof DataView !== 'undefined';
+
+  var defineProperty$9 = objectDefineProperty.f;
+
+
+
+
+
+  var Int8Array$1 = global_1.Int8Array;
+  var Int8ArrayPrototype = Int8Array$1 && Int8Array$1.prototype;
+  var Uint8ClampedArray$1 = global_1.Uint8ClampedArray;
+  var Uint8ClampedArrayPrototype = Uint8ClampedArray$1 && Uint8ClampedArray$1.prototype;
+  var TypedArray = Int8Array$1 && objectGetPrototypeOf(Int8Array$1);
+  var TypedArrayPrototype = Int8ArrayPrototype && objectGetPrototypeOf(Int8ArrayPrototype);
+  var ObjectPrototype$2 = Object.prototype;
+  var isPrototypeOf = ObjectPrototype$2.isPrototypeOf;
+
+  var TO_STRING_TAG$3 = wellKnownSymbol('toStringTag');
+  var TYPED_ARRAY_TAG = uid('TYPED_ARRAY_TAG');
+  // Fixing native typed arrays in Opera Presto crashes the browser, see #595
+  var NATIVE_ARRAY_BUFFER_VIEWS = arrayBufferNative && !!objectSetPrototypeOf && classof(global_1.opera) !== 'Opera';
+  var TYPED_ARRAY_TAG_REQIRED = false;
+  var NAME$1;
+
+  var TypedArrayConstructorsList = {
+    Int8Array: 1,
+    Uint8Array: 1,
+    Uint8ClampedArray: 1,
+    Int16Array: 2,
+    Uint16Array: 2,
+    Int32Array: 4,
+    Uint32Array: 4,
+    Float32Array: 4,
+    Float64Array: 8
+  };
+
+  var isView = function isView(it) {
+    var klass = classof(it);
+    return klass === 'DataView' || has(TypedArrayConstructorsList, klass);
+  };
+
+  var isTypedArray = function (it) {
+    return isObject(it) && has(TypedArrayConstructorsList, classof(it));
+  };
+
+  var aTypedArray = function (it) {
+    if (isTypedArray(it)) return it;
+    throw TypeError('Target is not a typed array');
+  };
+
+  var aTypedArrayConstructor = function (C) {
+    if (objectSetPrototypeOf) {
+      if (isPrototypeOf.call(TypedArray, C)) return C;
+    } else for (var ARRAY in TypedArrayConstructorsList) if (has(TypedArrayConstructorsList, NAME$1)) {
+      var TypedArrayConstructor = global_1[ARRAY];
+      if (TypedArrayConstructor && (C === TypedArrayConstructor || isPrototypeOf.call(TypedArrayConstructor, C))) {
+        return C;
+      }
+    } throw TypeError('Target is not a typed array constructor');
+  };
+
+  var exportTypedArrayMethod = function (KEY, property, forced) {
+    if (!descriptors) return;
+    if (forced) for (var ARRAY in TypedArrayConstructorsList) {
+      var TypedArrayConstructor = global_1[ARRAY];
+      if (TypedArrayConstructor && has(TypedArrayConstructor.prototype, KEY)) {
+        delete TypedArrayConstructor.prototype[KEY];
+      }
+    }
+    if (!TypedArrayPrototype[KEY] || forced) {
+      redefine(TypedArrayPrototype, KEY, forced ? property
+        : NATIVE_ARRAY_BUFFER_VIEWS && Int8ArrayPrototype[KEY] || property);
+    }
+  };
+
+  var exportTypedArrayStaticMethod = function (KEY, property, forced) {
+    var ARRAY, TypedArrayConstructor;
+    if (!descriptors) return;
+    if (objectSetPrototypeOf) {
+      if (forced) for (ARRAY in TypedArrayConstructorsList) {
+        TypedArrayConstructor = global_1[ARRAY];
+        if (TypedArrayConstructor && has(TypedArrayConstructor, KEY)) {
+          delete TypedArrayConstructor[KEY];
+        }
+      }
+      if (!TypedArray[KEY] || forced) {
+        // V8 ~ Chrome 49-50 `%TypedArray%` methods are non-writable non-configurable
+        try {
+          return redefine(TypedArray, KEY, forced ? property : NATIVE_ARRAY_BUFFER_VIEWS && Int8Array$1[KEY] || property);
+        } catch (error) { /* empty */ }
+      } else return;
+    }
+    for (ARRAY in TypedArrayConstructorsList) {
+      TypedArrayConstructor = global_1[ARRAY];
+      if (TypedArrayConstructor && (!TypedArrayConstructor[KEY] || forced)) {
+        redefine(TypedArrayConstructor, KEY, property);
+      }
+    }
+  };
+
+  for (NAME$1 in TypedArrayConstructorsList) {
+    if (!global_1[NAME$1]) NATIVE_ARRAY_BUFFER_VIEWS = false;
+  }
+
+  // WebKit bug - typed arrays constructors prototype is Object.prototype
+  if (!NATIVE_ARRAY_BUFFER_VIEWS || typeof TypedArray != 'function' || TypedArray === Function.prototype) {
+    // eslint-disable-next-line no-shadow
+    TypedArray = function TypedArray() {
+      throw TypeError('Incorrect invocation');
+    };
+    if (NATIVE_ARRAY_BUFFER_VIEWS) for (NAME$1 in TypedArrayConstructorsList) {
+      if (global_1[NAME$1]) objectSetPrototypeOf(global_1[NAME$1], TypedArray);
+    }
+  }
+
+  if (!NATIVE_ARRAY_BUFFER_VIEWS || !TypedArrayPrototype || TypedArrayPrototype === ObjectPrototype$2) {
+    TypedArrayPrototype = TypedArray.prototype;
+    if (NATIVE_ARRAY_BUFFER_VIEWS) for (NAME$1 in TypedArrayConstructorsList) {
+      if (global_1[NAME$1]) objectSetPrototypeOf(global_1[NAME$1].prototype, TypedArrayPrototype);
+    }
+  }
+
+  // WebKit bug - one more object in Uint8ClampedArray prototype chain
+  if (NATIVE_ARRAY_BUFFER_VIEWS && objectGetPrototypeOf(Uint8ClampedArrayPrototype) !== TypedArrayPrototype) {
+    objectSetPrototypeOf(Uint8ClampedArrayPrototype, TypedArrayPrototype);
+  }
+
+  if (descriptors && !has(TypedArrayPrototype, TO_STRING_TAG$3)) {
+    TYPED_ARRAY_TAG_REQIRED = true;
+    defineProperty$9(TypedArrayPrototype, TO_STRING_TAG$3, { get: function () {
+      return isObject(this) ? this[TYPED_ARRAY_TAG] : undefined;
+    } });
+    for (NAME$1 in TypedArrayConstructorsList) if (global_1[NAME$1]) {
+      createNonEnumerableProperty(global_1[NAME$1], TYPED_ARRAY_TAG, NAME$1);
+    }
+  }
+
+  var arrayBufferViewCore = {
+    NATIVE_ARRAY_BUFFER_VIEWS: NATIVE_ARRAY_BUFFER_VIEWS,
+    TYPED_ARRAY_TAG: TYPED_ARRAY_TAG_REQIRED && TYPED_ARRAY_TAG,
+    aTypedArray: aTypedArray,
+    aTypedArrayConstructor: aTypedArrayConstructor,
+    exportTypedArrayMethod: exportTypedArrayMethod,
+    exportTypedArrayStaticMethod: exportTypedArrayStaticMethod,
+    isView: isView,
+    isTypedArray: isTypedArray,
+    TypedArray: TypedArray,
+    TypedArrayPrototype: TypedArrayPrototype
+  };
+
+  /* eslint-disable no-new */
+
+
+
+  var NATIVE_ARRAY_BUFFER_VIEWS$1 = arrayBufferViewCore.NATIVE_ARRAY_BUFFER_VIEWS;
+
+  var ArrayBuffer$1 = global_1.ArrayBuffer;
+  var Int8Array$2 = global_1.Int8Array;
+
+  var typedArrayConstructorsRequireWrappers = !NATIVE_ARRAY_BUFFER_VIEWS$1 || !fails(function () {
+    Int8Array$2(1);
+  }) || !fails(function () {
+    new Int8Array$2(-1);
+  }) || !checkCorrectnessOfIteration(function (iterable) {
+    new Int8Array$2();
+    new Int8Array$2(null);
+    new Int8Array$2(1.5);
+    new Int8Array$2(iterable);
+  }, true) || fails(function () {
+    // Safari (11+) bug - a reason why even Safari 13 should load a typed array polyfill
+    return new Int8Array$2(new ArrayBuffer$1(2), 1, undefined).length !== 1;
+  });
+
+  // `ToIndex` abstract operation
+  // https://tc39.github.io/ecma262/#sec-toindex
+  var toIndex = function (it) {
+    if (it === undefined) return 0;
+    var number = toInteger(it);
+    var length = toLength(number);
+    if (number !== length) throw RangeError('Wrong length or index');
+    return length;
+  };
+
+  // IEEE754 conversions based on https://github.com/feross/ieee754
+  // eslint-disable-next-line no-shadow-restricted-names
+  var Infinity$1 = 1 / 0;
+  var abs = Math.abs;
+  var pow = Math.pow;
+  var floor$2 = Math.floor;
+  var log = Math.log;
+  var LN2 = Math.LN2;
+
+  var pack = function (number, mantissaLength, bytes) {
+    var buffer = new Array(bytes);
+    var exponentLength = bytes * 8 - mantissaLength - 1;
+    var eMax = (1 << exponentLength) - 1;
+    var eBias = eMax >> 1;
+    var rt = mantissaLength === 23 ? pow(2, -24) - pow(2, -77) : 0;
+    var sign = number < 0 || number === 0 && 1 / number < 0 ? 1 : 0;
+    var index = 0;
+    var exponent, mantissa, c;
+    number = abs(number);
+    // eslint-disable-next-line no-self-compare
+    if (number != number || number === Infinity$1) {
+      // eslint-disable-next-line no-self-compare
+      mantissa = number != number ? 1 : 0;
+      exponent = eMax;
+    } else {
+      exponent = floor$2(log(number) / LN2);
+      if (number * (c = pow(2, -exponent)) < 1) {
+        exponent--;
+        c *= 2;
+      }
+      if (exponent + eBias >= 1) {
+        number += rt / c;
+      } else {
+        number += rt * pow(2, 1 - eBias);
+      }
+      if (number * c >= 2) {
+        exponent++;
+        c /= 2;
+      }
+      if (exponent + eBias >= eMax) {
+        mantissa = 0;
+        exponent = eMax;
+      } else if (exponent + eBias >= 1) {
+        mantissa = (number * c - 1) * pow(2, mantissaLength);
+        exponent = exponent + eBias;
+      } else {
+        mantissa = number * pow(2, eBias - 1) * pow(2, mantissaLength);
+        exponent = 0;
+      }
+    }
+    for (; mantissaLength >= 8; buffer[index++] = mantissa & 255, mantissa /= 256, mantissaLength -= 8);
+    exponent = exponent << mantissaLength | mantissa;
+    exponentLength += mantissaLength;
+    for (; exponentLength > 0; buffer[index++] = exponent & 255, exponent /= 256, exponentLength -= 8);
+    buffer[--index] |= sign * 128;
+    return buffer;
+  };
+
+  var unpack = function (buffer, mantissaLength) {
+    var bytes = buffer.length;
+    var exponentLength = bytes * 8 - mantissaLength - 1;
+    var eMax = (1 << exponentLength) - 1;
+    var eBias = eMax >> 1;
+    var nBits = exponentLength - 7;
+    var index = bytes - 1;
+    var sign = buffer[index--];
+    var exponent = sign & 127;
+    var mantissa;
+    sign >>= 7;
+    for (; nBits > 0; exponent = exponent * 256 + buffer[index], index--, nBits -= 8);
+    mantissa = exponent & (1 << -nBits) - 1;
+    exponent >>= -nBits;
+    nBits += mantissaLength;
+    for (; nBits > 0; mantissa = mantissa * 256 + buffer[index], index--, nBits -= 8);
+    if (exponent === 0) {
+      exponent = 1 - eBias;
+    } else if (exponent === eMax) {
+      return mantissa ? NaN : sign ? -Infinity$1 : Infinity$1;
+    } else {
+      mantissa = mantissa + pow(2, mantissaLength);
+      exponent = exponent - eBias;
+    } return (sign ? -1 : 1) * mantissa * pow(2, exponent - mantissaLength);
+  };
+
+  var ieee754 = {
+    pack: pack,
+    unpack: unpack
+  };
+
+  // `Array.prototype.fill` method implementation
+  // https://tc39.github.io/ecma262/#sec-array.prototype.fill
+  var arrayFill = function fill(value /* , start = 0, end = @length */) {
+    var O = toObject(this);
+    var length = toLength(O.length);
+    var argumentsLength = arguments.length;
+    var index = toAbsoluteIndex(argumentsLength > 1 ? arguments[1] : undefined, length);
+    var end = argumentsLength > 2 ? arguments[2] : undefined;
+    var endPos = end === undefined ? length : toAbsoluteIndex(end, length);
+    while (endPos > index) O[index++] = value;
+    return O;
+  };
+
+  var getOwnPropertyNames$2 = objectGetOwnPropertyNames.f;
+  var defineProperty$a = objectDefineProperty.f;
+
+
+
+
+  var getInternalState$4 = internalState.get;
+  var setInternalState$6 = internalState.set;
+  var ARRAY_BUFFER = 'ArrayBuffer';
+  var DATA_VIEW = 'DataView';
+  var PROTOTYPE$2 = 'prototype';
+  var WRONG_LENGTH = 'Wrong length';
+  var WRONG_INDEX = 'Wrong index';
+  var NativeArrayBuffer = global_1[ARRAY_BUFFER];
+  var $ArrayBuffer = NativeArrayBuffer;
+  var $DataView = global_1[DATA_VIEW];
+  var $DataViewPrototype = $DataView && $DataView[PROTOTYPE$2];
+  var ObjectPrototype$3 = Object.prototype;
+  var RangeError$1 = global_1.RangeError;
+
+  var packIEEE754 = ieee754.pack;
+  var unpackIEEE754 = ieee754.unpack;
+
+  var packInt8 = function (number) {
+    return [number & 0xFF];
+  };
+
+  var packInt16 = function (number) {
+    return [number & 0xFF, number >> 8 & 0xFF];
+  };
+
+  var packInt32 = function (number) {
+    return [number & 0xFF, number >> 8 & 0xFF, number >> 16 & 0xFF, number >> 24 & 0xFF];
+  };
+
+  var unpackInt32 = function (buffer) {
+    return buffer[3] << 24 | buffer[2] << 16 | buffer[1] << 8 | buffer[0];
+  };
+
+  var packFloat32 = function (number) {
+    return packIEEE754(number, 23, 4);
+  };
+
+  var packFloat64 = function (number) {
+    return packIEEE754(number, 52, 8);
+  };
+
+  var addGetter = function (Constructor, key) {
+    defineProperty$a(Constructor[PROTOTYPE$2], key, { get: function () { return getInternalState$4(this)[key]; } });
+  };
+
+  var get$1 = function (view, count, index, isLittleEndian) {
+    var intIndex = toIndex(index);
+    var store = getInternalState$4(view);
+    if (intIndex + count > store.byteLength) throw RangeError$1(WRONG_INDEX);
+    var bytes = getInternalState$4(store.buffer).bytes;
+    var start = intIndex + store.byteOffset;
+    var pack = bytes.slice(start, start + count);
+    return isLittleEndian ? pack : pack.reverse();
+  };
+
+  var set$2 = function (view, count, index, conversion, value, isLittleEndian) {
+    var intIndex = toIndex(index);
+    var store = getInternalState$4(view);
+    if (intIndex + count > store.byteLength) throw RangeError$1(WRONG_INDEX);
+    var bytes = getInternalState$4(store.buffer).bytes;
+    var start = intIndex + store.byteOffset;
+    var pack = conversion(+value);
+    for (var i = 0; i < count; i++) bytes[start + i] = pack[isLittleEndian ? i : count - i - 1];
+  };
+
+  if (!arrayBufferNative) {
+    $ArrayBuffer = function ArrayBuffer(length) {
+      anInstance(this, $ArrayBuffer, ARRAY_BUFFER);
+      var byteLength = toIndex(length);
+      setInternalState$6(this, {
+        bytes: arrayFill.call(new Array(byteLength), 0),
+        byteLength: byteLength
+      });
+      if (!descriptors) this.byteLength = byteLength;
+    };
+
+    $DataView = function DataView(buffer, byteOffset, byteLength) {
+      anInstance(this, $DataView, DATA_VIEW);
+      anInstance(buffer, $ArrayBuffer, DATA_VIEW);
+      var bufferLength = getInternalState$4(buffer).byteLength;
+      var offset = toInteger(byteOffset);
+      if (offset < 0 || offset > bufferLength) throw RangeError$1('Wrong offset');
+      byteLength = byteLength === undefined ? bufferLength - offset : toLength(byteLength);
+      if (offset + byteLength > bufferLength) throw RangeError$1(WRONG_LENGTH);
+      setInternalState$6(this, {
+        buffer: buffer,
+        byteLength: byteLength,
+        byteOffset: offset
+      });
+      if (!descriptors) {
+        this.buffer = buffer;
+        this.byteLength = byteLength;
+        this.byteOffset = offset;
+      }
+    };
+
+    if (descriptors) {
+      addGetter($ArrayBuffer, 'byteLength');
+      addGetter($DataView, 'buffer');
+      addGetter($DataView, 'byteLength');
+      addGetter($DataView, 'byteOffset');
+    }
+
+    redefineAll($DataView[PROTOTYPE$2], {
+      getInt8: function getInt8(byteOffset) {
+        return get$1(this, 1, byteOffset)[0] << 24 >> 24;
+      },
+      getUint8: function getUint8(byteOffset) {
+        return get$1(this, 1, byteOffset)[0];
+      },
+      getInt16: function getInt16(byteOffset /* , littleEndian */) {
+        var bytes = get$1(this, 2, byteOffset, arguments.length > 1 ? arguments[1] : undefined);
+        return (bytes[1] << 8 | bytes[0]) << 16 >> 16;
+      },
+      getUint16: function getUint16(byteOffset /* , littleEndian */) {
+        var bytes = get$1(this, 2, byteOffset, arguments.length > 1 ? arguments[1] : undefined);
+        return bytes[1] << 8 | bytes[0];
+      },
+      getInt32: function getInt32(byteOffset /* , littleEndian */) {
+        return unpackInt32(get$1(this, 4, byteOffset, arguments.length > 1 ? arguments[1] : undefined));
+      },
+      getUint32: function getUint32(byteOffset /* , littleEndian */) {
+        return unpackInt32(get$1(this, 4, byteOffset, arguments.length > 1 ? arguments[1] : undefined)) >>> 0;
+      },
+      getFloat32: function getFloat32(byteOffset /* , littleEndian */) {
+        return unpackIEEE754(get$1(this, 4, byteOffset, arguments.length > 1 ? arguments[1] : undefined), 23);
+      },
+      getFloat64: function getFloat64(byteOffset /* , littleEndian */) {
+        return unpackIEEE754(get$1(this, 8, byteOffset, arguments.length > 1 ? arguments[1] : undefined), 52);
+      },
+      setInt8: function setInt8(byteOffset, value) {
+        set$2(this, 1, byteOffset, packInt8, value);
+      },
+      setUint8: function setUint8(byteOffset, value) {
+        set$2(this, 1, byteOffset, packInt8, value);
+      },
+      setInt16: function setInt16(byteOffset, value /* , littleEndian */) {
+        set$2(this, 2, byteOffset, packInt16, value, arguments.length > 2 ? arguments[2] : undefined);
+      },
+      setUint16: function setUint16(byteOffset, value /* , littleEndian */) {
+        set$2(this, 2, byteOffset, packInt16, value, arguments.length > 2 ? arguments[2] : undefined);
+      },
+      setInt32: function setInt32(byteOffset, value /* , littleEndian */) {
+        set$2(this, 4, byteOffset, packInt32, value, arguments.length > 2 ? arguments[2] : undefined);
+      },
+      setUint32: function setUint32(byteOffset, value /* , littleEndian */) {
+        set$2(this, 4, byteOffset, packInt32, value, arguments.length > 2 ? arguments[2] : undefined);
+      },
+      setFloat32: function setFloat32(byteOffset, value /* , littleEndian */) {
+        set$2(this, 4, byteOffset, packFloat32, value, arguments.length > 2 ? arguments[2] : undefined);
+      },
+      setFloat64: function setFloat64(byteOffset, value /* , littleEndian */) {
+        set$2(this, 8, byteOffset, packFloat64, value, arguments.length > 2 ? arguments[2] : undefined);
+      }
+    });
+  } else {
+    if (!fails(function () {
+      NativeArrayBuffer(1);
+    }) || !fails(function () {
+      new NativeArrayBuffer(-1); // eslint-disable-line no-new
+    }) || fails(function () {
+      new NativeArrayBuffer(); // eslint-disable-line no-new
+      new NativeArrayBuffer(1.5); // eslint-disable-line no-new
+      new NativeArrayBuffer(NaN); // eslint-disable-line no-new
+      return NativeArrayBuffer.name != ARRAY_BUFFER;
+    })) {
+      $ArrayBuffer = function ArrayBuffer(length) {
+        anInstance(this, $ArrayBuffer);
+        return new NativeArrayBuffer(toIndex(length));
+      };
+      var ArrayBufferPrototype = $ArrayBuffer[PROTOTYPE$2] = NativeArrayBuffer[PROTOTYPE$2];
+      for (var keys$3 = getOwnPropertyNames$2(NativeArrayBuffer), j$1 = 0, key$1; keys$3.length > j$1;) {
+        if (!((key$1 = keys$3[j$1++]) in $ArrayBuffer)) {
+          createNonEnumerableProperty($ArrayBuffer, key$1, NativeArrayBuffer[key$1]);
+        }
+      }
+      ArrayBufferPrototype.constructor = $ArrayBuffer;
+    }
+
+    // WebKit bug - the same parent prototype for typed arrays and data view
+    if (objectSetPrototypeOf && objectGetPrototypeOf($DataViewPrototype) !== ObjectPrototype$3) {
+      objectSetPrototypeOf($DataViewPrototype, ObjectPrototype$3);
+    }
+
+    // iOS Safari 7.x bug
+    var testView = new $DataView(new $ArrayBuffer(2));
+    var nativeSetInt8 = $DataViewPrototype.setInt8;
+    testView.setInt8(0, 2147483648);
+    testView.setInt8(1, 2147483649);
+    if (testView.getInt8(0) || !testView.getInt8(1)) redefineAll($DataViewPrototype, {
+      setInt8: function setInt8(byteOffset, value) {
+        nativeSetInt8.call(this, byteOffset, value << 24 >> 24);
+      },
+      setUint8: function setUint8(byteOffset, value) {
+        nativeSetInt8.call(this, byteOffset, value << 24 >> 24);
+      }
+    }, { unsafe: true });
+  }
+
+  setToStringTag($ArrayBuffer, ARRAY_BUFFER);
+  setToStringTag($DataView, DATA_VIEW);
+
+  var arrayBuffer = {
+    ArrayBuffer: $ArrayBuffer,
+    DataView: $DataView
+  };
+
+  var toPositiveInteger = function (it) {
+    var result = toInteger(it);
+    if (result < 0) throw RangeError("The argument can't be less than 0");
+    return result;
+  };
+
+  var toOffset = function (it, BYTES) {
+    var offset = toPositiveInteger(it);
+    if (offset % BYTES) throw RangeError('Wrong offset');
+    return offset;
+  };
+
+  var aTypedArrayConstructor$1 = arrayBufferViewCore.aTypedArrayConstructor;
+
+  var typedArrayFrom = function from(source /* , mapfn, thisArg */) {
+    var O = toObject(source);
+    var argumentsLength = arguments.length;
+    var mapfn = argumentsLength > 1 ? arguments[1] : undefined;
+    var mapping = mapfn !== undefined;
+    var iteratorMethod = getIteratorMethod(O);
+    var i, length, result, step, iterator, next;
+    if (iteratorMethod != undefined && !isArrayIteratorMethod(iteratorMethod)) {
+      iterator = iteratorMethod.call(O);
+      next = iterator.next;
+      O = [];
+      while (!(step = next.call(iterator)).done) {
+        O.push(step.value);
+      }
+    }
+    if (mapping && argumentsLength > 2) {
+      mapfn = functionBindContext(mapfn, arguments[2], 2);
+    }
+    length = toLength(O.length);
+    result = new (aTypedArrayConstructor$1(this))(length);
+    for (i = 0; length > i; i++) {
+      result[i] = mapping ? mapfn(O[i], i) : O[i];
+    }
+    return result;
+  };
+
+  var typedArrayConstructor = createCommonjsModule(function (module) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  var getOwnPropertyNames = objectGetOwnPropertyNames.f;
+
+  var forEach = arrayIteration.forEach;
+
+
+
+
+
+
+  var getInternalState = internalState.get;
+  var setInternalState = internalState.set;
+  var nativeDefineProperty = objectDefineProperty.f;
+  var nativeGetOwnPropertyDescriptor = objectGetOwnPropertyDescriptor.f;
+  var round = Math.round;
+  var RangeError = global_1.RangeError;
+  var ArrayBuffer = arrayBuffer.ArrayBuffer;
+  var DataView = arrayBuffer.DataView;
+  var NATIVE_ARRAY_BUFFER_VIEWS = arrayBufferViewCore.NATIVE_ARRAY_BUFFER_VIEWS;
+  var TYPED_ARRAY_TAG = arrayBufferViewCore.TYPED_ARRAY_TAG;
+  var TypedArray = arrayBufferViewCore.TypedArray;
+  var TypedArrayPrototype = arrayBufferViewCore.TypedArrayPrototype;
+  var aTypedArrayConstructor = arrayBufferViewCore.aTypedArrayConstructor;
+  var isTypedArray = arrayBufferViewCore.isTypedArray;
+  var BYTES_PER_ELEMENT = 'BYTES_PER_ELEMENT';
+  var WRONG_LENGTH = 'Wrong length';
+
+  var fromList = function (C, list) {
+    var index = 0;
+    var length = list.length;
+    var result = new (aTypedArrayConstructor(C))(length);
+    while (length > index) result[index] = list[index++];
+    return result;
+  };
+
+  var addGetter = function (it, key) {
+    nativeDefineProperty(it, key, { get: function () {
+      return getInternalState(this)[key];
+    } });
+  };
+
+  var isArrayBuffer = function (it) {
+    var klass;
+    return it instanceof ArrayBuffer || (klass = classof(it)) == 'ArrayBuffer' || klass == 'SharedArrayBuffer';
+  };
+
+  var isTypedArrayIndex = function (target, key) {
+    return isTypedArray(target)
+      && typeof key != 'symbol'
+      && key in target
+      && String(+key) == String(key);
+  };
+
+  var wrappedGetOwnPropertyDescriptor = function getOwnPropertyDescriptor(target, key) {
+    return isTypedArrayIndex(target, key = toPrimitive(key, true))
+      ? createPropertyDescriptor(2, target[key])
+      : nativeGetOwnPropertyDescriptor(target, key);
+  };
+
+  var wrappedDefineProperty = function defineProperty(target, key, descriptor) {
+    if (isTypedArrayIndex(target, key = toPrimitive(key, true))
+      && isObject(descriptor)
+      && has(descriptor, 'value')
+      && !has(descriptor, 'get')
+      && !has(descriptor, 'set')
+      // TODO: add validation descriptor w/o calling accessors
+      && !descriptor.configurable
+      && (!has(descriptor, 'writable') || descriptor.writable)
+      && (!has(descriptor, 'enumerable') || descriptor.enumerable)
+    ) {
+      target[key] = descriptor.value;
+      return target;
+    } return nativeDefineProperty(target, key, descriptor);
+  };
+
+  if (descriptors) {
+    if (!NATIVE_ARRAY_BUFFER_VIEWS) {
+      objectGetOwnPropertyDescriptor.f = wrappedGetOwnPropertyDescriptor;
+      objectDefineProperty.f = wrappedDefineProperty;
+      addGetter(TypedArrayPrototype, 'buffer');
+      addGetter(TypedArrayPrototype, 'byteOffset');
+      addGetter(TypedArrayPrototype, 'byteLength');
+      addGetter(TypedArrayPrototype, 'length');
+    }
+
+    _export({ target: 'Object', stat: true, forced: !NATIVE_ARRAY_BUFFER_VIEWS }, {
+      getOwnPropertyDescriptor: wrappedGetOwnPropertyDescriptor,
+      defineProperty: wrappedDefineProperty
+    });
+
+    module.exports = function (TYPE, wrapper, CLAMPED) {
+      var BYTES = TYPE.match(/\d+$/)[0] / 8;
+      var CONSTRUCTOR_NAME = TYPE + (CLAMPED ? 'Clamped' : '') + 'Array';
+      var GETTER = 'get' + TYPE;
+      var SETTER = 'set' + TYPE;
+      var NativeTypedArrayConstructor = global_1[CONSTRUCTOR_NAME];
+      var TypedArrayConstructor = NativeTypedArrayConstructor;
+      var TypedArrayConstructorPrototype = TypedArrayConstructor && TypedArrayConstructor.prototype;
+      var exported = {};
+
+      var getter = function (that, index) {
+        var data = getInternalState(that);
+        return data.view[GETTER](index * BYTES + data.byteOffset, true);
+      };
+
+      var setter = function (that, index, value) {
+        var data = getInternalState(that);
+        if (CLAMPED) value = (value = round(value)) < 0 ? 0 : value > 0xFF ? 0xFF : value & 0xFF;
+        data.view[SETTER](index * BYTES + data.byteOffset, value, true);
+      };
+
+      var addElement = function (that, index) {
+        nativeDefineProperty(that, index, {
+          get: function () {
+            return getter(this, index);
+          },
+          set: function (value) {
+            return setter(this, index, value);
+          },
+          enumerable: true
+        });
+      };
+
+      if (!NATIVE_ARRAY_BUFFER_VIEWS) {
+        TypedArrayConstructor = wrapper(function (that, data, offset, $length) {
+          anInstance(that, TypedArrayConstructor, CONSTRUCTOR_NAME);
+          var index = 0;
+          var byteOffset = 0;
+          var buffer, byteLength, length;
+          if (!isObject(data)) {
+            length = toIndex(data);
+            byteLength = length * BYTES;
+            buffer = new ArrayBuffer(byteLength);
+          } else if (isArrayBuffer(data)) {
+            buffer = data;
+            byteOffset = toOffset(offset, BYTES);
+            var $len = data.byteLength;
+            if ($length === undefined) {
+              if ($len % BYTES) throw RangeError(WRONG_LENGTH);
+              byteLength = $len - byteOffset;
+              if (byteLength < 0) throw RangeError(WRONG_LENGTH);
+            } else {
+              byteLength = toLength($length) * BYTES;
+              if (byteLength + byteOffset > $len) throw RangeError(WRONG_LENGTH);
+            }
+            length = byteLength / BYTES;
+          } else if (isTypedArray(data)) {
+            return fromList(TypedArrayConstructor, data);
+          } else {
+            return typedArrayFrom.call(TypedArrayConstructor, data);
+          }
+          setInternalState(that, {
+            buffer: buffer,
+            byteOffset: byteOffset,
+            byteLength: byteLength,
+            length: length,
+            view: new DataView(buffer)
+          });
+          while (index < length) addElement(that, index++);
+        });
+
+        if (objectSetPrototypeOf) objectSetPrototypeOf(TypedArrayConstructor, TypedArray);
+        TypedArrayConstructorPrototype = TypedArrayConstructor.prototype = objectCreate(TypedArrayPrototype);
+      } else if (typedArrayConstructorsRequireWrappers) {
+        TypedArrayConstructor = wrapper(function (dummy, data, typedArrayOffset, $length) {
+          anInstance(dummy, TypedArrayConstructor, CONSTRUCTOR_NAME);
+          return inheritIfRequired(function () {
+            if (!isObject(data)) return new NativeTypedArrayConstructor(toIndex(data));
+            if (isArrayBuffer(data)) return $length !== undefined
+              ? new NativeTypedArrayConstructor(data, toOffset(typedArrayOffset, BYTES), $length)
+              : typedArrayOffset !== undefined
+                ? new NativeTypedArrayConstructor(data, toOffset(typedArrayOffset, BYTES))
+                : new NativeTypedArrayConstructor(data);
+            if (isTypedArray(data)) return fromList(TypedArrayConstructor, data);
+            return typedArrayFrom.call(TypedArrayConstructor, data);
+          }(), dummy, TypedArrayConstructor);
+        });
+
+        if (objectSetPrototypeOf) objectSetPrototypeOf(TypedArrayConstructor, TypedArray);
+        forEach(getOwnPropertyNames(NativeTypedArrayConstructor), function (key) {
+          if (!(key in TypedArrayConstructor)) {
+            createNonEnumerableProperty(TypedArrayConstructor, key, NativeTypedArrayConstructor[key]);
+          }
+        });
+        TypedArrayConstructor.prototype = TypedArrayConstructorPrototype;
+      }
+
+      if (TypedArrayConstructorPrototype.constructor !== TypedArrayConstructor) {
+        createNonEnumerableProperty(TypedArrayConstructorPrototype, 'constructor', TypedArrayConstructor);
+      }
+
+      if (TYPED_ARRAY_TAG) {
+        createNonEnumerableProperty(TypedArrayConstructorPrototype, TYPED_ARRAY_TAG, CONSTRUCTOR_NAME);
+      }
+
+      exported[CONSTRUCTOR_NAME] = TypedArrayConstructor;
+
+      _export({
+        global: true, forced: TypedArrayConstructor != NativeTypedArrayConstructor, sham: !NATIVE_ARRAY_BUFFER_VIEWS
+      }, exported);
+
+      if (!(BYTES_PER_ELEMENT in TypedArrayConstructor)) {
+        createNonEnumerableProperty(TypedArrayConstructor, BYTES_PER_ELEMENT, BYTES);
+      }
+
+      if (!(BYTES_PER_ELEMENT in TypedArrayConstructorPrototype)) {
+        createNonEnumerableProperty(TypedArrayConstructorPrototype, BYTES_PER_ELEMENT, BYTES);
+      }
+
+      setSpecies(CONSTRUCTOR_NAME);
+    };
+  } else module.exports = function () { /* empty */ };
+  });
+
+  // `Float32Array` constructor
+  // https://tc39.github.io/ecma262/#sec-typedarray-objects
+  typedArrayConstructor('Float32', function (init) {
+    return function Float32Array(data, byteOffset, length) {
+      return init(this, data, byteOffset, length);
+    };
+  });
+
+  // `Float64Array` constructor
+  // https://tc39.github.io/ecma262/#sec-typedarray-objects
+  typedArrayConstructor('Float64', function (init) {
+    return function Float64Array(data, byteOffset, length) {
+      return init(this, data, byteOffset, length);
+    };
+  });
+
+  // `Int8Array` constructor
+  // https://tc39.github.io/ecma262/#sec-typedarray-objects
+  typedArrayConstructor('Int8', function (init) {
+    return function Int8Array(data, byteOffset, length) {
+      return init(this, data, byteOffset, length);
+    };
+  });
+
+  // `Int16Array` constructor
+  // https://tc39.github.io/ecma262/#sec-typedarray-objects
+  typedArrayConstructor('Int16', function (init) {
+    return function Int16Array(data, byteOffset, length) {
+      return init(this, data, byteOffset, length);
+    };
+  });
+
+  // `Int32Array` constructor
+  // https://tc39.github.io/ecma262/#sec-typedarray-objects
+  typedArrayConstructor('Int32', function (init) {
+    return function Int32Array(data, byteOffset, length) {
+      return init(this, data, byteOffset, length);
+    };
+  });
+
+  // `Uint8Array` constructor
+  // https://tc39.github.io/ecma262/#sec-typedarray-objects
+  typedArrayConstructor('Uint8', function (init) {
+    return function Uint8Array(data, byteOffset, length) {
+      return init(this, data, byteOffset, length);
+    };
+  });
+
+  // `Uint8ClampedArray` constructor
+  // https://tc39.github.io/ecma262/#sec-typedarray-objects
+  typedArrayConstructor('Uint8', function (init) {
+    return function Uint8ClampedArray(data, byteOffset, length) {
+      return init(this, data, byteOffset, length);
+    };
+  }, true);
+
+  // `Uint16Array` constructor
+  // https://tc39.github.io/ecma262/#sec-typedarray-objects
+  typedArrayConstructor('Uint16', function (init) {
+    return function Uint16Array(data, byteOffset, length) {
+      return init(this, data, byteOffset, length);
+    };
+  });
+
+  // `Uint32Array` constructor
+  // https://tc39.github.io/ecma262/#sec-typedarray-objects
+  typedArrayConstructor('Uint32', function (init) {
+    return function Uint32Array(data, byteOffset, length) {
+      return init(this, data, byteOffset, length);
+    };
+  });
+
+  var min$6 = Math.min;
+
+  // `Array.prototype.copyWithin` method implementation
+  // https://tc39.github.io/ecma262/#sec-array.prototype.copywithin
+  var arrayCopyWithin = [].copyWithin || function copyWithin(target /* = 0 */, start /* = 0, end = @length */) {
+    var O = toObject(this);
+    var len = toLength(O.length);
+    var to = toAbsoluteIndex(target, len);
+    var from = toAbsoluteIndex(start, len);
+    var end = arguments.length > 2 ? arguments[2] : undefined;
+    var count = min$6((end === undefined ? len : toAbsoluteIndex(end, len)) - from, len - to);
+    var inc = 1;
+    if (from < to && to < from + count) {
+      inc = -1;
+      from += count - 1;
+      to += count - 1;
+    }
+    while (count-- > 0) {
+      if (from in O) O[to] = O[from];
+      else delete O[to];
+      to += inc;
+      from += inc;
+    } return O;
+  };
+
+  var aTypedArray$1 = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$1 = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.copyWithin` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.copywithin
+  exportTypedArrayMethod$1('copyWithin', function copyWithin(target, start /* , end */) {
+    return arrayCopyWithin.call(aTypedArray$1(this), target, start, arguments.length > 2 ? arguments[2] : undefined);
+  });
+
+  var $every = arrayIteration.every;
+
+  var aTypedArray$2 = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$2 = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.every` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.every
+  exportTypedArrayMethod$2('every', function every(callbackfn /* , thisArg */) {
+    return $every(aTypedArray$2(this), callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+  });
+
+  var aTypedArray$3 = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$3 = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.fill` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.fill
+  // eslint-disable-next-line no-unused-vars
+  exportTypedArrayMethod$3('fill', function fill(value /* , start, end */) {
+    return arrayFill.apply(aTypedArray$3(this), arguments);
+  });
+
+  var $filter$1 = arrayIteration.filter;
+
+
+  var aTypedArray$4 = arrayBufferViewCore.aTypedArray;
+  var aTypedArrayConstructor$2 = arrayBufferViewCore.aTypedArrayConstructor;
+  var exportTypedArrayMethod$4 = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.filter` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.filter
+  exportTypedArrayMethod$4('filter', function filter(callbackfn /* , thisArg */) {
+    var list = $filter$1(aTypedArray$4(this), callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+    var C = speciesConstructor(this, this.constructor);
+    var index = 0;
+    var length = list.length;
+    var result = new (aTypedArrayConstructor$2(C))(length);
+    while (length > index) result[index] = list[index++];
+    return result;
+  });
+
+  var $find$1 = arrayIteration.find;
+
+  var aTypedArray$5 = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$5 = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.find` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.find
+  exportTypedArrayMethod$5('find', function find(predicate /* , thisArg */) {
+    return $find$1(aTypedArray$5(this), predicate, arguments.length > 1 ? arguments[1] : undefined);
+  });
+
+  var $findIndex = arrayIteration.findIndex;
+
+  var aTypedArray$6 = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$6 = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.findIndex` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.findindex
+  exportTypedArrayMethod$6('findIndex', function findIndex(predicate /* , thisArg */) {
+    return $findIndex(aTypedArray$6(this), predicate, arguments.length > 1 ? arguments[1] : undefined);
+  });
+
+  var $forEach$2 = arrayIteration.forEach;
+
+  var aTypedArray$7 = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$7 = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.forEach` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.foreach
+  exportTypedArrayMethod$7('forEach', function forEach(callbackfn /* , thisArg */) {
+    $forEach$2(aTypedArray$7(this), callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+  });
+
+  var $includes$1 = arrayIncludes.includes;
+
+  var aTypedArray$8 = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$8 = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.includes` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.includes
+  exportTypedArrayMethod$8('includes', function includes(searchElement /* , fromIndex */) {
+    return $includes$1(aTypedArray$8(this), searchElement, arguments.length > 1 ? arguments[1] : undefined);
+  });
+
+  var $indexOf$1 = arrayIncludes.indexOf;
+
+  var aTypedArray$9 = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$9 = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.indexOf` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.indexof
+  exportTypedArrayMethod$9('indexOf', function indexOf(searchElement /* , fromIndex */) {
+    return $indexOf$1(aTypedArray$9(this), searchElement, arguments.length > 1 ? arguments[1] : undefined);
+  });
+
+  var ITERATOR$5 = wellKnownSymbol('iterator');
+  var Uint8Array$1 = global_1.Uint8Array;
+  var arrayValues = es_array_iterator.values;
+  var arrayKeys = es_array_iterator.keys;
+  var arrayEntries = es_array_iterator.entries;
+  var aTypedArray$a = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$a = arrayBufferViewCore.exportTypedArrayMethod;
+  var nativeTypedArrayIterator = Uint8Array$1 && Uint8Array$1.prototype[ITERATOR$5];
+
+  var CORRECT_ITER_NAME = !!nativeTypedArrayIterator
+    && (nativeTypedArrayIterator.name == 'values' || nativeTypedArrayIterator.name == undefined);
+
+  var typedArrayValues = function values() {
+    return arrayValues.call(aTypedArray$a(this));
+  };
+
+  // `%TypedArray%.prototype.entries` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.entries
+  exportTypedArrayMethod$a('entries', function entries() {
+    return arrayEntries.call(aTypedArray$a(this));
+  });
+  // `%TypedArray%.prototype.keys` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.keys
+  exportTypedArrayMethod$a('keys', function keys() {
+    return arrayKeys.call(aTypedArray$a(this));
+  });
+  // `%TypedArray%.prototype.values` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.values
+  exportTypedArrayMethod$a('values', typedArrayValues, !CORRECT_ITER_NAME);
+  // `%TypedArray%.prototype[@@iterator]` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype-@@iterator
+  exportTypedArrayMethod$a(ITERATOR$5, typedArrayValues, !CORRECT_ITER_NAME);
+
+  var aTypedArray$b = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$b = arrayBufferViewCore.exportTypedArrayMethod;
+  var $join = [].join;
+
+  // `%TypedArray%.prototype.join` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.join
+  // eslint-disable-next-line no-unused-vars
+  exportTypedArrayMethod$b('join', function join(separator) {
+    return $join.apply(aTypedArray$b(this), arguments);
+  });
+
+  var min$7 = Math.min;
+  var nativeLastIndexOf = [].lastIndexOf;
+  var NEGATIVE_ZERO$1 = !!nativeLastIndexOf && 1 / [1].lastIndexOf(1, -0) < 0;
+  var STRICT_METHOD$4 = arrayMethodIsStrict('lastIndexOf');
+  // For preventing possible almost infinite loop in non-standard implementations, test the forward version of the method
+  var USES_TO_LENGTH$8 = arrayMethodUsesToLength('indexOf', { ACCESSORS: true, 1: 0 });
+  var FORCED$3 = NEGATIVE_ZERO$1 || !STRICT_METHOD$4 || !USES_TO_LENGTH$8;
+
+  // `Array.prototype.lastIndexOf` method implementation
+  // https://tc39.github.io/ecma262/#sec-array.prototype.lastindexof
+  var arrayLastIndexOf = FORCED$3 ? function lastIndexOf(searchElement /* , fromIndex = @[*-1] */) {
+    // convert -0 to +0
+    if (NEGATIVE_ZERO$1) return nativeLastIndexOf.apply(this, arguments) || 0;
+    var O = toIndexedObject(this);
+    var length = toLength(O.length);
+    var index = length - 1;
+    if (arguments.length > 1) index = min$7(index, toInteger(arguments[1]));
+    if (index < 0) index = length + index;
+    for (;index >= 0; index--) if (index in O && O[index] === searchElement) return index || 0;
+    return -1;
+  } : nativeLastIndexOf;
+
+  var aTypedArray$c = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$c = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.lastIndexOf` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.lastindexof
+  // eslint-disable-next-line no-unused-vars
+  exportTypedArrayMethod$c('lastIndexOf', function lastIndexOf(searchElement /* , fromIndex */) {
+    return arrayLastIndexOf.apply(aTypedArray$c(this), arguments);
+  });
+
+  var $map$1 = arrayIteration.map;
+
+
+  var aTypedArray$d = arrayBufferViewCore.aTypedArray;
+  var aTypedArrayConstructor$3 = arrayBufferViewCore.aTypedArrayConstructor;
+  var exportTypedArrayMethod$d = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.map` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.map
+  exportTypedArrayMethod$d('map', function map(mapfn /* , thisArg */) {
+    return $map$1(aTypedArray$d(this), mapfn, arguments.length > 1 ? arguments[1] : undefined, function (O, length) {
+      return new (aTypedArrayConstructor$3(speciesConstructor(O, O.constructor)))(length);
+    });
+  });
+
+  var $reduce$1 = arrayReduce.left;
+
+  var aTypedArray$e = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$e = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.reduce` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.reduce
+  exportTypedArrayMethod$e('reduce', function reduce(callbackfn /* , initialValue */) {
+    return $reduce$1(aTypedArray$e(this), callbackfn, arguments.length, arguments.length > 1 ? arguments[1] : undefined);
+  });
+
+  var $reduceRight = arrayReduce.right;
+
+  var aTypedArray$f = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$f = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.reduceRicht` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.reduceright
+  exportTypedArrayMethod$f('reduceRight', function reduceRight(callbackfn /* , initialValue */) {
+    return $reduceRight(aTypedArray$f(this), callbackfn, arguments.length, arguments.length > 1 ? arguments[1] : undefined);
+  });
+
+  var aTypedArray$g = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$g = arrayBufferViewCore.exportTypedArrayMethod;
+  var floor$3 = Math.floor;
+
+  // `%TypedArray%.prototype.reverse` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.reverse
+  exportTypedArrayMethod$g('reverse', function reverse() {
+    var that = this;
+    var length = aTypedArray$g(that).length;
+    var middle = floor$3(length / 2);
+    var index = 0;
+    var value;
+    while (index < middle) {
+      value = that[index];
+      that[index++] = that[--length];
+      that[length] = value;
+    } return that;
+  });
+
+  var aTypedArray$h = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$h = arrayBufferViewCore.exportTypedArrayMethod;
+
+  var FORCED$4 = fails(function () {
+    // eslint-disable-next-line no-undef
+    new Int8Array(1).set({});
+  });
+
+  // `%TypedArray%.prototype.set` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.set
+  exportTypedArrayMethod$h('set', function set(arrayLike /* , offset */) {
+    aTypedArray$h(this);
+    var offset = toOffset(arguments.length > 1 ? arguments[1] : undefined, 1);
+    var length = this.length;
+    var src = toObject(arrayLike);
+    var len = toLength(src.length);
+    var index = 0;
+    if (len + offset > length) throw RangeError('Wrong length');
+    while (index < len) this[offset + index] = src[index++];
+  }, FORCED$4);
+
+  var aTypedArray$i = arrayBufferViewCore.aTypedArray;
+  var aTypedArrayConstructor$4 = arrayBufferViewCore.aTypedArrayConstructor;
+  var exportTypedArrayMethod$i = arrayBufferViewCore.exportTypedArrayMethod;
+  var $slice = [].slice;
+
+  var FORCED$5 = fails(function () {
+    // eslint-disable-next-line no-undef
+    new Int8Array(1).slice();
+  });
+
+  // `%TypedArray%.prototype.slice` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.slice
+  exportTypedArrayMethod$i('slice', function slice(start, end) {
+    var list = $slice.call(aTypedArray$i(this), start, end);
+    var C = speciesConstructor(this, this.constructor);
+    var index = 0;
+    var length = list.length;
+    var result = new (aTypedArrayConstructor$4(C))(length);
+    while (length > index) result[index] = list[index++];
+    return result;
+  }, FORCED$5);
+
+  var $some = arrayIteration.some;
+
+  var aTypedArray$j = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$j = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.some` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.some
+  exportTypedArrayMethod$j('some', function some(callbackfn /* , thisArg */) {
+    return $some(aTypedArray$j(this), callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+  });
+
+  var aTypedArray$k = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$k = arrayBufferViewCore.exportTypedArrayMethod;
+  var $sort = [].sort;
+
+  // `%TypedArray%.prototype.sort` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.sort
+  exportTypedArrayMethod$k('sort', function sort(comparefn) {
+    return $sort.call(aTypedArray$k(this), comparefn);
+  });
+
+  var aTypedArray$l = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$l = arrayBufferViewCore.exportTypedArrayMethod;
+
+  // `%TypedArray%.prototype.subarray` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.subarray
+  exportTypedArrayMethod$l('subarray', function subarray(begin, end) {
+    var O = aTypedArray$l(this);
+    var length = O.length;
+    var beginIndex = toAbsoluteIndex(begin, length);
+    return new (speciesConstructor(O, O.constructor))(
+      O.buffer,
+      O.byteOffset + beginIndex * O.BYTES_PER_ELEMENT,
+      toLength((end === undefined ? length : toAbsoluteIndex(end, length)) - beginIndex)
+    );
+  });
+
+  var Int8Array$3 = global_1.Int8Array;
+  var aTypedArray$m = arrayBufferViewCore.aTypedArray;
+  var exportTypedArrayMethod$m = arrayBufferViewCore.exportTypedArrayMethod;
+  var $toLocaleString = [].toLocaleString;
+  var $slice$1 = [].slice;
+
+  // iOS Safari 6.x fails here
+  var TO_LOCALE_STRING_BUG = !!Int8Array$3 && fails(function () {
+    $toLocaleString.call(new Int8Array$3(1));
+  });
+
+  var FORCED$6 = fails(function () {
+    return [1, 2].toLocaleString() != new Int8Array$3([1, 2]).toLocaleString();
+  }) || !fails(function () {
+    Int8Array$3.prototype.toLocaleString.call([1, 2]);
+  });
+
+  // `%TypedArray%.prototype.toLocaleString` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.tolocalestring
+  exportTypedArrayMethod$m('toLocaleString', function toLocaleString() {
+    return $toLocaleString.apply(TO_LOCALE_STRING_BUG ? $slice$1.call(aTypedArray$m(this)) : aTypedArray$m(this), arguments);
+  }, FORCED$6);
+
+  var exportTypedArrayMethod$n = arrayBufferViewCore.exportTypedArrayMethod;
+
+
+
+  var Uint8Array$2 = global_1.Uint8Array;
+  var Uint8ArrayPrototype = Uint8Array$2 && Uint8Array$2.prototype || {};
+  var arrayToString = [].toString;
+  var arrayJoin = [].join;
+
+  if (fails(function () { arrayToString.call({}); })) {
+    arrayToString = function toString() {
+      return arrayJoin.call(this);
+    };
+  }
+
+  var IS_NOT_ARRAY_METHOD = Uint8ArrayPrototype.toString != arrayToString;
+
+  // `%TypedArray%.prototype.toString` method
+  // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.tostring
+  exportTypedArrayMethod$n('toString', arrayToString, IS_NOT_ARRAY_METHOD);
+
+  var getWeakData = internalMetadata.getWeakData;
+
+
+
+
+
+
+
+
+  var setInternalState$7 = internalState.set;
+  var internalStateGetterFor$1 = internalState.getterFor;
+  var find = arrayIteration.find;
+  var findIndex = arrayIteration.findIndex;
+  var id$1 = 0;
+
+  // fallback for uncaught frozen keys
+  var uncaughtFrozenStore = function (store) {
+    return store.frozen || (store.frozen = new UncaughtFrozenStore());
+  };
+
+  var UncaughtFrozenStore = function () {
+    this.entries = [];
+  };
+
+  var findUncaughtFrozen = function (store, key) {
+    return find(store.entries, function (it) {
+      return it[0] === key;
+    });
+  };
+
+  UncaughtFrozenStore.prototype = {
+    get: function (key) {
+      var entry = findUncaughtFrozen(this, key);
+      if (entry) return entry[1];
+    },
+    has: function (key) {
+      return !!findUncaughtFrozen(this, key);
+    },
+    set: function (key, value) {
+      var entry = findUncaughtFrozen(this, key);
+      if (entry) entry[1] = value;
+      else this.entries.push([key, value]);
+    },
+    'delete': function (key) {
+      var index = findIndex(this.entries, function (it) {
+        return it[0] === key;
+      });
+      if (~index) this.entries.splice(index, 1);
+      return !!~index;
+    }
+  };
+
+  var collectionWeak = {
+    getConstructor: function (wrapper, CONSTRUCTOR_NAME, IS_MAP, ADDER) {
+      var C = wrapper(function (that, iterable) {
+        anInstance(that, C, CONSTRUCTOR_NAME);
+        setInternalState$7(that, {
+          type: CONSTRUCTOR_NAME,
+          id: id$1++,
+          frozen: undefined
+        });
+        if (iterable != undefined) iterate_1(iterable, that[ADDER], that, IS_MAP);
+      });
+
+      var getInternalState = internalStateGetterFor$1(CONSTRUCTOR_NAME);
+
+      var define = function (that, key, value) {
+        var state = getInternalState(that);
+        var data = getWeakData(anObject(key), true);
+        if (data === true) uncaughtFrozenStore(state).set(key, value);
+        else data[state.id] = value;
+        return that;
+      };
+
+      redefineAll(C.prototype, {
+        // 23.3.3.2 WeakMap.prototype.delete(key)
+        // 23.4.3.3 WeakSet.prototype.delete(value)
+        'delete': function (key) {
+          var state = getInternalState(this);
+          if (!isObject(key)) return false;
+          var data = getWeakData(key);
+          if (data === true) return uncaughtFrozenStore(state)['delete'](key);
+          return data && has(data, state.id) && delete data[state.id];
+        },
+        // 23.3.3.4 WeakMap.prototype.has(key)
+        // 23.4.3.4 WeakSet.prototype.has(value)
+        has: function has$1(key) {
+          var state = getInternalState(this);
+          if (!isObject(key)) return false;
+          var data = getWeakData(key);
+          if (data === true) return uncaughtFrozenStore(state).has(key);
+          return data && has(data, state.id);
+        }
+      });
+
+      redefineAll(C.prototype, IS_MAP ? {
+        // 23.3.3.3 WeakMap.prototype.get(key)
+        get: function get(key) {
+          var state = getInternalState(this);
+          if (isObject(key)) {
+            var data = getWeakData(key);
+            if (data === true) return uncaughtFrozenStore(state).get(key);
+            return data ? data[state.id] : undefined;
+          }
+        },
+        // 23.3.3.5 WeakMap.prototype.set(key, value)
+        set: function set(key, value) {
+          return define(this, key, value);
+        }
+      } : {
+        // 23.4.3.1 WeakSet.prototype.add(value)
+        add: function add(value) {
+          return define(this, value, true);
+        }
+      });
+
+      return C;
+    }
+  };
+
+  var es_weakMap = createCommonjsModule(function (module) {
+
+
+
+
+
+
+  var enforceIternalState = internalState.enforce;
+
+
+  var IS_IE11 = !global_1.ActiveXObject && 'ActiveXObject' in global_1;
+  var isExtensible = Object.isExtensible;
+  var InternalWeakMap;
+
+  var wrapper = function (init) {
+    return function WeakMap() {
+      return init(this, arguments.length ? arguments[0] : undefined);
+    };
+  };
+
+  // `WeakMap` constructor
+  // https://tc39.github.io/ecma262/#sec-weakmap-constructor
+  var $WeakMap = module.exports = collection('WeakMap', wrapper, collectionWeak);
+
+  // IE11 WeakMap frozen keys fix
+  // We can't use feature detection because it crash some old IE builds
+  // https://github.com/zloirock/core-js/issues/485
+  if (nativeWeakMap && IS_IE11) {
+    InternalWeakMap = collectionWeak.getConstructor(wrapper, 'WeakMap', true);
+    internalMetadata.REQUIRED = true;
+    var WeakMapPrototype = $WeakMap.prototype;
+    var nativeDelete = WeakMapPrototype['delete'];
+    var nativeHas = WeakMapPrototype.has;
+    var nativeGet = WeakMapPrototype.get;
+    var nativeSet = WeakMapPrototype.set;
+    redefineAll(WeakMapPrototype, {
+      'delete': function (key) {
+        if (isObject(key) && !isExtensible(key)) {
+          var state = enforceIternalState(this);
+          if (!state.frozen) state.frozen = new InternalWeakMap();
+          return nativeDelete.call(this, key) || state.frozen['delete'](key);
+        } return nativeDelete.call(this, key);
+      },
+      has: function has(key) {
+        if (isObject(key) && !isExtensible(key)) {
+          var state = enforceIternalState(this);
+          if (!state.frozen) state.frozen = new InternalWeakMap();
+          return nativeHas.call(this, key) || state.frozen.has(key);
+        } return nativeHas.call(this, key);
+      },
+      get: function get(key) {
+        if (isObject(key) && !isExtensible(key)) {
+          var state = enforceIternalState(this);
+          if (!state.frozen) state.frozen = new InternalWeakMap();
+          return nativeHas.call(this, key) ? nativeGet.call(this, key) : state.frozen.get(key);
+        } return nativeGet.call(this, key);
+      },
+      set: function set(key, value) {
+        if (isObject(key) && !isExtensible(key)) {
+          var state = enforceIternalState(this);
+          if (!state.frozen) state.frozen = new InternalWeakMap();
+          nativeHas.call(this, key) ? nativeSet.call(this, key, value) : state.frozen.set(key, value);
+        } else nativeSet.call(this, key, value);
+        return this;
+      }
+    });
+  }
+  });
+
+  // `WeakSet` constructor
+  // https://tc39.github.io/ecma262/#sec-weakset-constructor
+  collection('WeakSet', function (init) {
+    return function WeakSet() { return init(this, arguments.length ? arguments[0] : undefined); };
+  }, collectionWeak);
+
+  var ITERATOR$6 = wellKnownSymbol('iterator');
+  var TO_STRING_TAG$4 = wellKnownSymbol('toStringTag');
+  var ArrayValues = es_array_iterator.values;
+
+  for (var COLLECTION_NAME$1 in domIterables) {
+    var Collection$1 = global_1[COLLECTION_NAME$1];
+    var CollectionPrototype$1 = Collection$1 && Collection$1.prototype;
+    if (CollectionPrototype$1) {
+      // some Chrome versions have non-configurable methods on DOMTokenList
+      if (CollectionPrototype$1[ITERATOR$6] !== ArrayValues) try {
+        createNonEnumerableProperty(CollectionPrototype$1, ITERATOR$6, ArrayValues);
+      } catch (error) {
+        CollectionPrototype$1[ITERATOR$6] = ArrayValues;
+      }
+      if (!CollectionPrototype$1[TO_STRING_TAG$4]) {
+        createNonEnumerableProperty(CollectionPrototype$1, TO_STRING_TAG$4, COLLECTION_NAME$1);
+      }
+      if (domIterables[COLLECTION_NAME$1]) for (var METHOD_NAME in es_array_iterator) {
+        // some Chrome versions have non-configurable methods on DOMTokenList
+        if (CollectionPrototype$1[METHOD_NAME] !== es_array_iterator[METHOD_NAME]) try {
+          createNonEnumerableProperty(CollectionPrototype$1, METHOD_NAME, es_array_iterator[METHOD_NAME]);
+        } catch (error) {
+          CollectionPrototype$1[METHOD_NAME] = es_array_iterator[METHOD_NAME];
+        }
+      }
+    }
+  }
+
+  var _this4 = undefined;
+
+  var Prop = function Prop(context, prop) {
+    var isConst = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+    var isGlobal = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
+
+    _classCallCheck(this, Prop);
+
+    this.context = context;
+    this.prop = prop;
+    this.isConst = isConst;
+    this.isGlobal = isGlobal;
+  };
+
+  var Lisp = function Lisp(obj) {
+    _classCallCheck(this, Lisp);
+
+    this.op = obj.op;
+    this.a = obj.a;
+    this.b = obj.b;
+  };
+
+  var If = function If(t, f) {
+    _classCallCheck(this, If);
+
+    this.t = t;
+    this.f = f;
+  };
+
+  var KeyVal = function KeyVal(key, val) {
+    _classCallCheck(this, KeyVal);
+
+    this.key = key;
+    this.val = val;
+  };
+
+  var ObjectFunc = function ObjectFunc(key, args, tree) {
+    _classCallCheck(this, ObjectFunc);
+
+    this.key = key;
+    this.args = args;
+    this.tree = tree;
+  };
+
+  var SpreadObject = function SpreadObject(item) {
+    _classCallCheck(this, SpreadObject);
+
+    this.item = item;
+  };
+
+  var SpreadArray = function SpreadArray(item) {
+    _classCallCheck(this, SpreadArray);
+
+    this.item = item;
+  };
+
+  var Scope = /*#__PURE__*/function () {
+    function Scope(parent) {
+      var vars = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+      var functionThis = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : undefined;
+
+      _classCallCheck(this, Scope);
+
+      this["const"] = {};
+      this["var"] = {};
+      this.globals = {};
+      this.parent = parent;
+      this["let"] = !parent ? {} : vars;
+      this.globals = !parent ? vars : {};
+      this.functionThis = functionThis || !parent;
+
+      if (functionThis) {
+        this.declare('this', 'var', functionThis);
+      }
+    }
+
+    _createClass(Scope, [{
+      key: "get",
+      value: function get(key) {
+        var functionScope = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
+        if (!this.parent || !functionScope || this.functionThis) {
+          if (this["const"].hasOwnProperty(key)) {
+            return new Prop(this["const"], key, true, key in this.globals);
+          }
+
+          if (this["var"].hasOwnProperty(key)) {
+            return new Prop(this["var"], key, false, key in this.globals);
+          }
+
+          if (this["let"].hasOwnProperty(key)) {
+            return new Prop(this["let"], key, false, key in this.globals);
+          }
+
+          if (!this.parent && this.globals.hasOwnProperty(key)) {
+            return new Prop(this.functionThis, key, false, true);
+          }
+
+          if (!this.parent) {
+            return new Prop(undefined, key);
+          }
+        }
+
+        return this.parent.get(key, functionScope);
+      }
+    }, {
+      key: "set",
+      value: function set(key, val) {
+        if (key === 'this') throw new SyntaxError('"this" cannot be a variable');
+        var prop = this.get(key);
+
+        if (prop.context === undefined) {
+          throw new ReferenceError("Variable '".concat(key, "' was not declared."));
+        }
+
+        if (prop.isConst) {
+          throw new TypeError("Cannot assign to const variable '".concat(key, "'"));
+        }
+
+        if (prop.isGlobal) {
+          throw new SandboxError("Cannot override global variable '".concat(key, "'"));
+        }
+
+        prop.context[prop] = val;
+        return prop;
+      }
+    }, {
+      key: "declare",
+      value: function declare(key) {
+        var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+        var value = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : undefined;
+        var isGlobal = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
+
+        if (type === 'var' && !this.functionThis && this.parent) {
+          this.parent.declare(key, type, value, isGlobal);
+        } else if (!(key in this["var"]) || !(key in this["let"]) || !(key in this["const"]) || !(key in this.globals)) {
+          if (isGlobal) {
+            this.globals[key] = value;
+          }
+
+          this[type][key] = value;
+        } else {
+          throw Error("Variable '".concat(key, "' already declared"));
+        }
+      }
+    }]);
+
+    return Scope;
+  }();
+
+  var ParseError = /*#__PURE__*/function (_Error) {
+    _inherits(ParseError, _Error);
+
+    function ParseError(message, code) {
+      var _this;
+
+      _classCallCheck(this, ParseError);
+
+      _this = _possibleConstructorReturn(this, _getPrototypeOf(ParseError).call(this, message));
+      _this.code = code;
+      return _this;
+    }
+
+    return ParseError;
+  }( /*#__PURE__*/_wrapNativeSuper(Error));
+
+  var SandboxError = /*#__PURE__*/function (_Error2) {
+    _inherits(SandboxError, _Error2);
+
+    function SandboxError() {
+      _classCallCheck(this, SandboxError);
+
+      return _possibleConstructorReturn(this, _getPrototypeOf(SandboxError).apply(this, arguments));
+    }
+
+    return SandboxError;
+  }( /*#__PURE__*/_wrapNativeSuper(Error));
+
+  var SandboxGlobal = function SandboxGlobal(globals) {
+    _classCallCheck(this, SandboxGlobal);
+
+    if (globals === globalThis) return globalThis;
+
+    for (var i in globals) {
+      this[i] = globals[i];
+    }
+  };
+
+  function sandboxFunction(context) {
+    return SandboxFunction;
+
+    function SandboxFunction() {
+      for (var _len = arguments.length, params = new Array(_len), _key = 0; _key < _len; _key++) {
+        params[_key] = arguments[_key];
+      }
+
+      var code = params.pop();
+      var parsed = Sandbox.parse(code);
+      return function () {
+        var vars = {};
+
+        for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+          args[_key2] = arguments[_key2];
+        }
+
+        var _iteratorNormalCompletion = true;
+        var _didIteratorError = false;
+        var _iteratorError = undefined;
+
+        try {
+          for (var _iterator = params[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var i = _step.value;
+            vars[i] = args.shift();
+          }
+        } catch (err) {
+          _didIteratorError = true;
+          _iteratorError = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion && _iterator["return"] != null) {
+              _iterator["return"]();
+            }
+          } finally {
+            if (_didIteratorError) {
+              throw _iteratorError;
+            }
+          }
+        }
+
+        var res = context.sandbox.executeTree(parsed);
+
+        if (context.options.audit) {
+          var _loop = function _loop(key) {
+            var _this2 = this;
+
+            var add = res.auditReport.globalsAccess[key];
+            context.auditReport.globalsAccess[key] = context.auditReport.globalsAccess[key] || new Set();
+            add.forEach(function (val) {
+              _newArrowCheck(this, _this2);
+
+              context.auditReport.globalsAccess[key].add(val);
+            }.bind(this));
+          };
+
+          for (var key in res.auditReport.globalsAccess) {
+            _loop(key);
+          }
+
+          var _loop2 = function _loop2(Class) {
+            var _this3 = this;
+
+            var add = res.auditReport.prototypeAccess[Class];
+            context.auditReport.prototypeAccess[Class] = context.auditReport.prototypeAccess[Class] || new Set();
+            add.forEach(function (val) {
+              _newArrowCheck(this, _this3);
+
+              context.auditReport.prototypeAccess[Class].add(val);
+            }.bind(this));
+          };
+
+          for (var Class in res.auditReport.prototypeAccess) {
+            _loop2(Class);
+          }
+        }
+
+        return res.result;
+      };
+    }
+  }
+
+  function sandboxedEval(func) {
+    return sandboxEval;
+
+    function sandboxEval(code) {
+      return func(code)();
+    }
+  }
+
+  var expectTypes = {
+    op: {
+      types: {
+        op: /^(\/|\*\*(?!\=)|\*(?!\=)|\%(?!\=))/
+      },
+      next: ['value', 'prop', 'exp', 'modifier', 'incrementerBefore'],
+      firstChar: new Set(_toConsumableArray('/*%'))
+    },
+    splitter: {
+      types: {
+        split: /^(&&|&|\|\||\||<=|>=|<|>|!==|!=|===|==| instanceof | in |\+(?!\+)|\-(?!\-))(?!\=)/
+      },
+      next: ['value', 'prop', 'exp', 'modifier', 'incrementerBefore'],
+      firstChar: new Set(_toConsumableArray('&|<>!= +-'))
+    },
+    "if": {
+      types: {
+        "if": /^\?/,
+        "else": /^:/
+      },
+      next: ['expEnd'],
+      firstChar: new Set(_toConsumableArray('?:'))
+    },
+    assignment: {
+      types: {
+        assignModify: /^(\-=|\+=|\/=|\*\*=|\*=|%=|\^=|\&=|\|=)/,
+        assign: /^(=)/
+      },
+      next: ['value', 'function', 'prop', 'exp', 'modifier', 'incrementerBefore'],
+      firstChar: new Set(_toConsumableArray('+-=*%^&|/'))
+    },
+    incrementerBefore: {
+      types: {
+        incrementerBefore: /^(\+\+|\-\-)/
+      },
+      next: ['prop'],
+      firstChar: new Set(_toConsumableArray('+-'))
+    },
+    incrementerAfter: {
+      types: {
+        incrementerAfter: /^(\+\+|\-\-)/
+      },
+      next: ['splitter', 'op', 'expEnd'],
+      firstChar: new Set(_toConsumableArray('+-'))
+    },
+    expEdge: {
+      types: {
+        arrayProp: /^[\[]/,
+        call: /^[\(]/
+      },
+      next: ['splitter', 'op', 'expEdge', 'if', 'dot', 'expEnd'],
+      firstChar: new Set(_toConsumableArray('[('))
+    },
+    modifier: {
+      types: {
+        not: /^!/,
+        inverse: /^~/,
+        negative: /^\-(?!\-)/,
+        positive: /^\+(?!\+)/,
+        "typeof": /^ typeof /
+      },
+      next: ['exp', 'modifier', 'value', 'prop', 'incrementerBefore'],
+      firstChar: new Set(_toConsumableArray('!~-+ '))
+    },
+    exp: {
+      types: {
+        createObject: /^\{/,
+        createArray: /^\[/,
+        group: /^\(/
+      },
+      next: ['splitter', 'op', 'expEdge', 'if', 'dot', 'expEnd'],
+      firstChar: new Set(_toConsumableArray('{[('))
+    },
+    dot: {
+      types: {
+        dot: /^\.(?!\.)/
+      },
+      next: ['splitter', 'incrementerAfter', 'assignment', 'op', 'expEdge', 'if', 'dot', 'expEnd'],
+      firstChar: new Set(_toConsumableArray('.'))
+    },
+    prop: {
+      types: {
+        prop: /^[a-zA-Z\$_][a-zA-Z\d\$_]*/
+      },
+      next: ['splitter', 'incrementerAfter', 'assignment', 'op', 'expEdge', 'if', 'dot', 'expEnd'],
+      firstChar: new Set(_toConsumableArray('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYX$_'))
+    },
+    value: {
+      types: {
+        number: /^\-?\d+(\.\d+)?/,
+        string: /^"(\d+)"/,
+        literal: /^`(\d+)`/,
+        "boolean": /^(true|false)(?![\w$_])/,
+        "null": /^null(?![\w$_])/,
+        und: /^undefined(?![\w$_])/,
+        NaN: /^NaN(?![\w$_])/,
+        Infinity: /^Infinity(?![\w$_])/
+      },
+      next: ['splitter', 'op', 'if', 'dot', 'expEnd'],
+      firstChar: new Set(_toConsumableArray('-"`tfunNI0123456789'))
+    },
+    "function": {
+      types: {
+        arrowFunc: /^\(?(([a-zA-Z\$_][a-zA-Z\d\$_]*,?)*)(\))?=>({)?/
+      },
+      next: ['expEnd'],
+      firstChar: new Set(_toConsumableArray('(abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYX$_'))
+    },
+    initialize: {
+      types: {
+        initialize: /^ (var|let|const) [a-zA-Z\$_][a-zA-Z\d\$_]*/
+      },
+      next: ['value', 'function', 'prop', 'exp', 'modifier', 'incrementerBefore', 'expEnd'],
+      firstChar: new Set(_toConsumableArray(' '))
+    },
+    spreadObject: {
+      types: {
+        spreadObject: /^\.\.\./
+      },
+      next: ['value', 'exp', 'prop'],
+      firstChar: new Set(_toConsumableArray('.'))
+    },
+    spreadArray: {
+      types: {
+        spreadArray: /^\.\.\./
+      },
+      next: ['value', 'exp', 'prop'],
+      firstChar: new Set(_toConsumableArray('.'))
+    },
+    expEnd: {
+      types: {},
+      next: [],
+      firstChar: new Set()
+    },
+    expStart: {
+      types: {
+        "return": /^ return /
+      },
+      next: ['value', 'function', 'prop', 'exp', 'modifier', 'incrementerBefore', 'expEnd'],
+      firstChar: new Set(_toConsumableArray(' '))
+    }
+  };
+  var closings = {
+    "(": ")",
+    "[": "]",
+    "{": "}",
+    "'": "'",
+    '"': '"',
+    "`": "`"
+  };
+  var closingsRegex = {
+    "(": /^\)/,
+    "[": /^\]/,
+    "{": /^\}/,
+    "'": /^\'/,
+    '"': /^\"/,
+    "`": /^\`/
+  };
+
+  var _restOfExp = function restOfExp(part, tests, quote) {
+    _newArrowCheck(this, _this4);
+
+    var okFirstChars = /^[\+\-~ !]/;
+    var isStart = true;
+    tests = tests || [expectTypes.op.types.op, expectTypes.splitter.types.split, expectTypes["if"].types["if"], expectTypes["if"].types["else"]];
+    var escape = false;
+    var done = false;
+    var i;
+
+    for (i = 0; i < part.length && !done; i++) {
+      var _char = part[i];
+
+      if (quote === '"' || quote === "'" || quote === "`") {
+        if (quote === "`" && _char === "$" && part[i + 1] === "{" && !escape) {
+          var skip = _restOfExp(part.substring(i + 2), [/^}/]);
+
+          i += skip.length + 2;
+        } else if (_char === quote && !escape) {
+          return part.substring(0, i);
+        }
+
+        escape = _char === "\\";
+      } else if (closings[_char]) {
+        var _skip = _restOfExp(part.substring(i + 1), [closingsRegex[quote]], _char);
+
+        i += _skip.length + 1;
+        isStart = false;
+      } else if (!quote) {
+        var sub = part.substring(i);
+        var _iteratorNormalCompletion2 = true;
+        var _didIteratorError2 = false;
+        var _iteratorError2 = undefined;
+
+        try {
+          for (var _iterator2 = tests[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var test = _step2.value;
+            done = test.test(sub);
+            if (done) break;
+          }
+        } catch (err) {
+          _didIteratorError2 = true;
+          _iteratorError2 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion2 && _iterator2["return"] != null) {
+              _iterator2["return"]();
+            }
+          } finally {
+            if (_didIteratorError2) {
+              throw _iteratorError2;
+            }
+          }
+        }
+
+        if (isStart) {
+          if (okFirstChars.test(sub)) {
+            done = false;
+          } else {
+            isStart = false;
+          }
+        }
+
+        if (done) break;
+      } else if (_char === closings[quote]) {
+        return part.substring(0, i);
+      }
+    }
+
+    return part.substring(0, i);
+  }.bind(undefined);
+
+  _restOfExp.next = ['splitter', 'op', 'expEnd'];
+
+  function assignCheck(obj) {
+    if (obj.context === undefined) {
+      throw new ReferenceError("Cannot assign value to undefined.");
+    }
+
+    if (_typeof(obj.context) !== 'object') {
+      throw new SyntaxError("Cannot assign value to a primitive.");
+    }
+
+    if (obj.isConst) {
+      throw new TypeError("Cannot set value to const variable '".concat(obj.prop, "'"));
+    }
+
+    if (obj.isGlobal) {
+      throw new SandboxError("Cannot override property of global variable '".concat(obj.prop, "'"));
+    }
+
+    if (typeof obj.context[obj.prop] === 'function' && !obj.context.hasOwnProperty(obj.prop)) {
+      throw new SandboxError("Override prototype property '".concat(obj.prop, "' not allowed"));
+    }
+  }
+
+  var ops2 = {
+    'prop': function prop(a, b, obj, context, scope) {
+      _newArrowCheck(this, _this4);
+
+      if (a === null) {
+        throw new TypeError("Cannot get propety ".concat(b, " of null"));
+      }
+
+      if (typeof a === 'undefined') {
+        var prop = scope.get(b);
+        if (prop.context === undefined) throw new ReferenceError("".concat(b, " is not defined"));
+
+        if (prop.context === context.sandboxGlobal) {
+          if (context.options.audit) {
+            context.auditReport.globalsAccess.add(b);
+          }
+
+          if (context.sandboxGlobal[b] === Function) {
+            return context.Function;
+          }
+
+          if (context.sandboxGlobal[b] === eval) {
+            return context.eval;
+          }
+
+          var fn = context.sandboxGlobal[b];
+
+          if (setTimeout === fn || fn === setInterval) {
+            return undefined;
+          }
+        }
+
+        if (prop.context && prop.context[b] === globalThis) {
+          return context.globalScope.get('this');
+        }
+
+        return prop;
+      }
+
+      var ok = false;
+
+      if (typeof a === 'number') {
+        a = new Number(a);
+      }
+
+      if (typeof a === 'string') {
+        a = new String(a);
+      }
+
+      if (typeof a === 'boolean') {
+        a = new Boolean(a);
+      }
+
+      ok = a.hasOwnProperty(b) || parseInt(b, 10) + "" === b + "";
+
+      if (!ok && context.options.audit) {
+        ok = true;
+
+        if (typeof b === 'string') {
+          var prot = a.constructor.prototype;
+
+          do {
+            if (prot.hasOwnProperty(b)) {
+              if (!context.auditReport.prototypeAccess[prot.constructor.name]) {
+                context.auditReport.prototypeAccess[prot.constructor.name] = new Set();
+              }
+
+              context.auditReport.prototypeAccess[prot.constructor.name].add(b);
+            }
+          } while (prot = Object.getPrototypeOf(prot));
+        }
+      }
+
+      if (!ok) {
+        var _prot = a.constructor.prototype;
+
+        do {
+          var whitelist = context.prototypeWhitelist.get(_prot.constructor);
+          ok = whitelist && (!whitelist.size || whitelist.has(b));
+          if (ok) break;
+        } while (_prot = Object.getPrototypeOf(_prot));
+      }
+
+      if (ok) {
+        if (a[b] === Function) {
+          return context.Function;
+        }
+
+        if (a[b] === globalThis) {
+          return context.globalScope.get('this');
+        }
+
+        var g = obj.isGlobal || a.constructor === Function;
+        return new Prop(a, b, false, g);
+      }
+
+      throw Error("Method or property access prevented: ".concat(a.constructor.name, ".").concat(b));
+    }.bind(undefined),
+    'call': function call(a, b, obj, context, scope) {
+      var _this5 = this,
+          _obj$context;
+
+      _newArrowCheck(this, _this4);
+
+      if (context.options.forbidMethodCalls) throw new SandboxError("Method calls are not allowed");
+
+      if (typeof a !== 'function') {
+        throw new TypeError("".concat(obj.prop, " is not a function"));
+      }
+
+      if (typeof obj === 'function') {
+        return obj.apply(void 0, _toConsumableArray(b.map(function (item) {
+          _newArrowCheck(this, _this5);
+
+          return exec(item, scope, context);
+        }.bind(this))));
+      }
+
+      return (_obj$context = obj.context)[obj.prop].apply(_obj$context, _toConsumableArray(b.map(function (item) {
+        _newArrowCheck(this, _this5);
+
+        return exec(item, scope, context);
+      }.bind(this))));
+    }.bind(undefined),
+    'createObject': function createObject(a, b, obj, context, scope) {
+      _newArrowCheck(this, _this4);
+
+      var res = {};
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
+
+      try {
+        for (var _iterator3 = b[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var item = _step3.value;
+
+          if (item instanceof SpreadObject) {
+            res = _objectSpread2({}, res, {}, item.item);
+          } else if (item instanceof ObjectFunc) {
+            (function () {
+              var f = item;
+
+              res[f.key] = function () {
+                var _this6 = this;
+
+                for (var _len3 = arguments.length, args = new Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+                  args[_key3] = arguments[_key3];
+                }
+
+                var vars = {};
+                f.args.forEach(function (arg, i) {
+                  _newArrowCheck(this, _this6);
+
+                  vars[arg] = args[i];
+                }.bind(this));
+                return context.sandbox.executeTree({
+                  tree: f.tree,
+                  strings: context.strings,
+                  literals: context.literals
+                }, [new Scope(scope, vars, this)]).result;
+              };
+            })();
+          } else {
+            res[item.key] = item.val;
+          }
+        }
+      } catch (err) {
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion3 && _iterator3["return"] != null) {
+            _iterator3["return"]();
+          }
+        } finally {
+          if (_didIteratorError3) {
+            throw _iteratorError3;
+          }
+        }
+      }
+
+      return res;
+    }.bind(undefined),
+    'keyVal': function keyVal(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return new KeyVal(a, b);
+    }.bind(undefined),
+    'createArray': function createArray(a, b, obj, context, scope) {
+      var _this7 = this;
+
+      _newArrowCheck(this, _this4);
+
+      var arrs = [];
+      var curr = [];
+      b.forEach(function (item) {
+        _newArrowCheck(this, _this7);
+
+        if (item instanceof SpreadArray) {
+          if (curr.length) {
+            arrs.push(curr);
+            curr = [];
+          }
+
+          arrs.push(item.item);
+        } else {
+          curr.push(exec(item, scope, context));
+        }
+      }.bind(this));
+      if (curr.length) arrs.push(curr);
+      return arrs.flat();
+    }.bind(undefined),
+    'group': function group(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return b;
+    }.bind(undefined),
+    'string': function string(a, b, obj, context) {
+      _newArrowCheck(this, _this4);
+
+      return context.strings[b];
+    }.bind(undefined),
+    'literal': function literal(a, b, obj, context, scope) {
+      var _this8 = this;
+
+      _newArrowCheck(this, _this4);
+
+      var name = context.literals[b].a;
+      return name.replace(/(\$\$)*(\$)?\${(\d+)}/g, function (match, $$, $, num) {
+        _newArrowCheck(this, _this8);
+
+        if ($) return match;
+        var res = exec(context.literals[b].b[parseInt(num, 10)], scope, context);
+        res = res instanceof Prop ? res.context[res.prop] : res;
+        return ($$ ? $$ : '') + "".concat(res).replace(/\$/g, '$$');
+      }.bind(this)).replace(/\$\$/g, '$');
+    }.bind(undefined),
+    'spreadArray': function spreadArray(a, b, obj, context, scope) {
+      _newArrowCheck(this, _this4);
+
+      return new SpreadArray(exec(b, scope, context));
+    }.bind(undefined),
+    'spreadObject': function spreadObject(a, b, obj, context, scope) {
+      _newArrowCheck(this, _this4);
+
+      return new SpreadObject(exec(b, scope, context));
+    }.bind(undefined),
+    '!': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return !b;
+    }.bind(undefined),
+    '~': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return ~b;
+    }.bind(undefined),
+    '++$': function $(a, b, obj) {
+      _newArrowCheck(this, _this4);
+
+      return ++obj.context[obj.prop];
+    }.bind(undefined),
+    '$++': function $(a, b, obj) {
+      _newArrowCheck(this, _this4);
+
+      return obj.context[obj.prop]++;
+    }.bind(undefined),
+    '--$': function $(a, b, obj) {
+      _newArrowCheck(this, _this4);
+
+      return --obj.context[obj.prop];
+    }.bind(undefined),
+    '$--': function $(a, b, obj) {
+      _newArrowCheck(this, _this4);
+
+      return obj.context[obj.prop]--;
+    }.bind(undefined),
+    '=': function _(a, b, obj, context, scope, bobj) {
+      _newArrowCheck(this, _this4);
+
+      assignCheck(obj);
+      obj.context[obj.prop] = b;
+      return new Prop(obj.context, obj.prop, false, obj.isGlobal);
+    }.bind(undefined),
+    '+=': function _(a, b, obj) {
+      _newArrowCheck(this, _this4);
+
+      assignCheck(obj);
+      return obj.context[obj.prop] += b;
+    }.bind(undefined),
+    '-=': function _(a, b, obj) {
+      _newArrowCheck(this, _this4);
+
+      assignCheck(obj);
+      return obj.context[obj.prop] -= b;
+    }.bind(undefined),
+    '/=': function _(a, b, obj) {
+      _newArrowCheck(this, _this4);
+
+      assignCheck(obj);
+      return obj.context[obj.prop] /= b;
+    }.bind(undefined),
+    '*=': function _(a, b, obj) {
+      _newArrowCheck(this, _this4);
+
+      assignCheck(obj);
+      return obj.context[obj.prop] *= b;
+    }.bind(undefined),
+    '**=': function _(a, b, obj) {
+      var _obj$context2, _obj$prop;
+
+      _newArrowCheck(this, _this4);
+
+      assignCheck(obj);
+      return _obj$context2 = obj.context, _obj$prop = obj.prop, _obj$context2[_obj$prop] = Math.pow(_obj$context2[_obj$prop], b);
+    }.bind(undefined),
+    '%=': function _(a, b, obj) {
+      _newArrowCheck(this, _this4);
+
+      assignCheck(obj);
+      return obj.context[obj.prop] %= b;
+    }.bind(undefined),
+    '^=': function _(a, b, obj) {
+      _newArrowCheck(this, _this4);
+
+      assignCheck(obj);
+      return obj.context[obj.prop] ^= b;
+    }.bind(undefined),
+    '&=': function _(a, b, obj) {
+      _newArrowCheck(this, _this4);
+
+      assignCheck(obj);
+      return obj.context[obj.prop] &= b;
+    }.bind(undefined),
+    '|=': function _(a, b, obj) {
+      _newArrowCheck(this, _this4);
+
+      assignCheck(obj);
+      return obj.context[obj.prop] |= b;
+    }.bind(undefined),
+    '?': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      if (!(b instanceof If)) {
+        throw new SyntaxError('Invalid inline if');
+      }
+
+      return a ? b.t : b.f;
+    }.bind(undefined),
+    '>': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a > b;
+    }.bind(undefined),
+    '<': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a < b;
+    }.bind(undefined),
+    '>=': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a >= b;
+    }.bind(undefined),
+    '<=': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a <= b;
+    }.bind(undefined),
+    '==': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a == b;
+    }.bind(undefined),
+    '===': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a === b;
+    }.bind(undefined),
+    '!=': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a != b;
+    }.bind(undefined),
+    '!==': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a !== b;
+    }.bind(undefined),
+    '&&': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a && b;
+    }.bind(undefined),
+    '||': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a || b;
+    }.bind(undefined),
+    '&': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a & b;
+    }.bind(undefined),
+    '|': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a | b;
+    }.bind(undefined),
+    ':': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return new If(a, b);
+    }.bind(undefined),
+    '+': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a + b;
+    }.bind(undefined),
+    '-': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a - b;
+    }.bind(undefined),
+    '$+': function $(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return +b;
+    }.bind(undefined),
+    '$-': function $(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return -b;
+    }.bind(undefined),
+    '/': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a / b;
+    }.bind(undefined),
+    '*': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a * b;
+    }.bind(undefined),
+    '%': function _(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a % b;
+    }.bind(undefined),
+    ' typeof ': function _typeof(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return _typeof();
+    }.bind(undefined),
+    ' instanceof ': function _instanceof(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a instanceof b;
+    }.bind(undefined),
+    ' in ': function _in(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return a in b;
+    }.bind(undefined),
+    'return': function _return(a, b) {
+      _newArrowCheck(this, _this4);
+
+      return b;
+    }.bind(undefined),
+    'var': function _var(a, b, obj, context, scope, bobj) {
+      _newArrowCheck(this, _this4);
+
+      scope.declare(a, 'var', exec(b, scope, context));
+      return new Prop(scope["var"], a, false, bobj && bobj.isGlobal);
+    }.bind(undefined),
+    'let': function _let(a, b, obj, context, scope, bobj) {
+      _newArrowCheck(this, _this4);
+
+      scope.declare(a, 'let', exec(b, scope, context), bobj && bobj.isGlobal);
+      return new Prop(scope["let"], a, false, bobj && bobj.isGlobal);
+    }.bind(undefined),
+    'const': function _const(a, b, obj, context, scope, bobj) {
+      _newArrowCheck(this, _this4);
+
+      scope.declare(a, 'const', exec(b, scope, context));
+      return new Prop(scope["const"], a, false, bobj && bobj.isGlobal);
+    }.bind(undefined),
+    'arrowFunc': function arrowFunc(a, b, obj, context, scope) {
+      var _this9 = this;
+
+      _newArrowCheck(this, _this4);
+
+      return function () {
+        var _this10 = this;
+
+        for (var _len4 = arguments.length, args = new Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+          args[_key4] = arguments[_key4];
+        }
+
+        _newArrowCheck(this, _this9);
+
+        var vars = {};
+        a.forEach(function (arg, i) {
+          _newArrowCheck(this, _this10);
+
+          vars[arg] = args[i];
+        }.bind(this));
+        return context.sandbox.executeTree({
+          tree: b,
+          strings: context.strings,
+          literals: context.literals
+        }, [new Scope(scope, vars)]).result;
+      }.bind(this);
+    }.bind(undefined)
+  };
+  var ops = new Map();
+
+  for (var op in ops2) {
+    ops.set(op, ops2[op]);
+  }
+
+  var lispTypes = new Map();
+
+  var setLispType = function setLispType(types, fn) {
+    var _this11 = this;
+
+    _newArrowCheck(this, _this4);
+
+    types.forEach(function (type) {
+      _newArrowCheck(this, _this11);
+
+      lispTypes.set(type, fn);
+    }.bind(this));
+  }.bind(undefined);
+
+  setLispType(['createArray', 'createObject', 'group', 'arrayProp', 'call'], function (type, part, res, expect, ctx) {
+    var _this12 = this;
+
+    _newArrowCheck(this, _this4);
+
+    var extract = "";
+    var closings = {
+      'createArray': ']',
+      'createObject': '}',
+      'group': ')',
+      'arrayProp': ']',
+      'call': ')'
+    };
+    var arg = [];
+    var end = false;
+    var i = 1;
+
+    while (i < part.length && !end) {
+      extract = _restOfExp(part.substring(i), [new RegExp('^\\' + closings[type]), /^,/]);
+      i += extract.length;
+
+      if (extract) {
+        arg.push(extract);
+      }
+
+      if (part[i] !== ',') {
+        end = true;
+      } else {
+        i++;
+      }
+    }
+
+    var next = ['value', 'function', 'prop', 'exp', 'modifier', 'incrementerBefore'];
+    var l;
+    var fFound;
+    var reg2 = /^([a-zA-Z\$_][a-zA-Z\d\$_]*)\((([a-zA-Z\$_][a-zA-Z\d\$_]*,?)*)\)?{/;
+
+    switch (type) {
+      case 'group':
+      case 'arrayProp':
+        l = lispify(arg.pop());
+        break;
+
+      case 'call':
+      case 'createArray':
+        l = arg.map(function (e) {
+          _newArrowCheck(this, _this12);
+
+          return lispify(e, [].concat(next, ['spreadArray']));
+        }.bind(this));
+        break;
+
+      case 'createObject':
+        l = arg.map(function (str) {
+          _newArrowCheck(this, _this12);
+
+          var value;
+          var key;
+          fFound = reg2.exec(str);
+
+          if (fFound) {
+            var args = fFound[2] ? fFound[2].split(",") : [];
+
+            var func = _restOfExp(str.substring(fFound.index + fFound[0].length), [/^}/]);
+
+            return new ObjectFunc(fFound[1], args, Sandbox.parse(func, null).tree);
+          } else {
+            var _extract = _restOfExp(str, [/^:/]);
+
+            key = lispify(_extract, [].concat(next, ['spreadObject']));
+
+            if (key instanceof Lisp && key.op === 'prop') {
+              key = key.b;
+            }
+
+            if (_extract.length === str.length) return key;
+            value = lispify(str.substring(_extract.length + 1));
+          }
+
+          return new Lisp({
+            op: 'keyVal',
+            a: key,
+            b: value
+          });
+        }.bind(this));
+        break;
+    }
+
+    type = type === 'arrayProp' ? 'prop' : type;
+    ctx.lispTree = lispify(part.substring(i + 1), expectTypes[expect].next, new Lisp({
+      op: type,
+      a: ctx.lispTree,
+      b: l
+    }));
+  }.bind(undefined));
+  setLispType(['op'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    var extract = _restOfExp(part.substring(res[0].length));
+
+    ctx.lispTree = new Lisp({
+      op: res[0],
+      a: ctx.lispTree,
+      b: lispify(extract)
+    });
+    ctx.lispTree = lispify(part.substring(extract.length + res[0].length), _restOfExp.next, ctx.lispTree);
+  }.bind(undefined));
+  setLispType(['inverse', 'not', 'negative', 'positive', 'typeof'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    var extract = _restOfExp(part.substring(res[0].length));
+
+    ctx.lispTree = new Lisp({
+      op: ['positive', 'negative'].includes(type) ? '$' + res[0] : res[0],
+      a: ctx.lispTree,
+      b: lispify(extract, expectTypes[expect].next)
+    });
+    ctx.lispTree = lispify(part.substring(extract.length + res[0].length), _restOfExp.next, ctx.lispTree);
+  }.bind(undefined));
+  setLispType(['incrementerBefore'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    var extract = _restOfExp(part.substring(2));
+
+    ctx.lispTree = lispify(part.substring(extract.length + 2), _restOfExp.next, new Lisp({
+      op: res[0] + "$",
+      a: lispify(extract, expectTypes[expect].next)
+    }));
+  }.bind(undefined));
+  setLispType(['incrementerAfter'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, new Lisp({
+      op: "$" + res[0],
+      a: ctx.lispTree
+    }));
+  }.bind(undefined));
+  setLispType(['assign', 'assignModify'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    ctx.lispTree = new Lisp({
+      op: res[0],
+      a: ctx.lispTree,
+      b: lispify(part.substring(res[0].length), expectTypes[expect].next)
+    });
+  }.bind(undefined));
+  setLispType(['split'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    var extract = _restOfExp(part.substring(res[0].length), [expectTypes.splitter.types.split, expectTypes["if"].types["if"], expectTypes["if"].types["else"]]);
+
+    ctx.lispTree = new Lisp({
+      op: res[0],
+      a: ctx.lispTree,
+      b: lispify(extract, expectTypes[expect].next)
+    });
+    ctx.lispTree = lispify(part.substring(extract.length + res[0].length), _restOfExp.next, ctx.lispTree);
+  }.bind(undefined));
+  setLispType(['if'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    var found = false;
+    var extract = "";
+    var quoteCount = 1;
+
+    while (!found && extract.length < part.length) {
+      extract += _restOfExp(part.substring(extract.length + 1), [expectTypes["if"].types["if"], expectTypes["if"].types["else"]]);
+
+      if (part[extract.length + 1] === '?') {
+        quoteCount++;
+      } else {
+        quoteCount--;
+      }
+
+      if (!quoteCount) {
+        found = true;
+      } else {
+        extract += part[extract.length + 1];
+      }
+    }
+
+    ctx.lispTree = new Lisp({
+      op: '?',
+      a: ctx.lispTree,
+      b: new Lisp({
+        op: ':',
+        a: lispify(extract),
+        b: lispify(part.substring(res[0].length + extract.length + 1))
+      })
+    });
+  }.bind(undefined));
+  setLispType(['dot', 'prop'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    var prop = res[0];
+    var index = res[0].length;
+
+    if (res[0] === '.') {
+      var matches = part.substring(res[0].length).match(expectTypes.prop.types.prop);
+
+      if (matches.length) {
+        prop = matches[0];
+        index = prop.length + res[0].length;
+      } else {
+        throw Error('Hanging  dot:' + part);
+      }
+    }
+
+    ctx.lispTree = lispify(part.substring(index), expectTypes[expect].next, new Lisp({
+      op: 'prop',
+      a: ctx.lispTree,
+      b: prop
+    }));
+  }.bind(undefined));
+  setLispType(['spreadArray', 'spreadObject'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    ctx.lispTree = new Lisp({
+      op: type,
+      b: lispify(part.substring(res[0].length), expectTypes[expect].next)
+    });
+  }.bind(undefined));
+  setLispType(['number', 'boolean', 'null'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, JSON.parse(res[0]));
+  }.bind(undefined));
+  setLispType(['und'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, undefined);
+  }.bind(undefined));
+  setLispType(['NaN'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, NaN);
+  }.bind(undefined));
+  setLispType(['Infinity'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, Infinity);
+  }.bind(undefined));
+  setLispType(['string', 'literal'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, new Lisp({
+      op: type,
+      b: parseInt(JSON.parse(res[1]), 10)
+    }));
+  }.bind(undefined));
+  setLispType(['return'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    ctx.lispTree = new Lisp({
+      op: 'return',
+      b: lispify(part.substring(res[0].length), expectTypes[expect].next)
+    });
+  }.bind(undefined));
+  setLispType(['initialize'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    var split = res[0].split(/ /g);
+
+    if (part.length === res[0].length) {
+      ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, new Lisp({
+        op: split[1],
+        a: split[2]
+      }));
+    } else {
+      ctx.lispTree = new Lisp({
+        op: split[1],
+        a: split[2],
+        b: lispify(part.substring(res[0].length + 1), expectTypes[expect].next)
+      });
+    }
+  }.bind(undefined));
+  setLispType(['arrowFunc'], function (type, part, res, expect, ctx) {
+    _newArrowCheck(this, _this4);
+
+    var args = res[1] ? res[1].split(",") : [];
+
+    if (res[3]) {
+      if (res[0][0] !== '(') throw new SyntaxError('Unstarted inline function brackets: ' + res[0]);
+    } else if (args.length) {
+      args = [args.pop()];
+    }
+
+    var func = (res[4] ? '' : ' return ') + _restOfExp(part.substring(res[0].length), res[4] ? [/^}/] : [/^[,;\)\}\]]/]);
+
+    ctx.lispTree = lispify(part.substring(res[0].length + func.length + 1), expectTypes[expect].next, new Lisp({
+      op: 'arrowFunc',
+      a: args,
+      b: Sandbox.parse(func, null).tree
+    }));
+  }.bind(undefined));
+
+  function lispify(part, expected, lispTree) {
+    expected = expected || ['initialize', 'expStart', 'value', 'function', 'prop', 'exp', 'modifier', 'incrementerBefore', 'expEnd'];
+    if (part === undefined) return lispTree;
+
+    if (!part.length && !expected.includes('expEnd')) {
+      throw new SyntaxError("Unexpected end of expression");
+    }
+
+    var ctx = {
+      lispTree: lispTree
+    };
+    var res;
+    var _iteratorNormalCompletion4 = true;
+    var _didIteratorError4 = false;
+    var _iteratorError4 = undefined;
+
+    try {
+      for (var _iterator4 = expected[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+        var expect = _step4.value;
+
+        if (expect === 'expEnd') {
+          continue;
+        }
+
+        if (expectTypes[expect].firstChar.has(part[0]) && !res) {
+          for (var type in expectTypes[expect].types) {
+            if (type === 'expEnd') {
+              continue;
+            }
+
+            if (res = expectTypes[expect].types[type].exec(part)) {
+              lispTypes.get(type)(type, part, res, expect, ctx);
+              break;
+            }
+          }
+        }
+
+        if (res) break;
+      }
+    } catch (err) {
+      _didIteratorError4 = true;
+      _iteratorError4 = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion4 && _iterator4["return"] != null) {
+          _iterator4["return"]();
+        }
+      } finally {
+        if (_didIteratorError4) {
+          throw _iteratorError4;
+        }
+      }
+    }
+
+    if (!res && part.length) {
+      throw Error("Unexpected token: " + part);
+    }
+
+    return ctx.lispTree;
+  }
+
+  function exec(tree, scope, context) {
+    var _this13 = this;
+
+    if (tree instanceof Prop) {
+      return tree.context[tree.prop];
+    }
+
+    if (Array.isArray(tree)) {
+      return tree.map(function (item) {
+        _newArrowCheck(this, _this13);
+
+        return exec(item, scope, context);
+      }.bind(this));
+    }
+
+    if (!(tree instanceof Lisp)) {
+      return tree;
+    }
+
+    if (tree.op === 'arrowFunc') {
+      return ops.get(tree.op)(tree.a, tree.b, undefined, context, scope);
+    }
+
+    var obj = exec(tree.a, scope, context);
+    var a = obj instanceof Prop ? obj.context ? obj.context[obj.prop] : undefined : obj;
+    var bobj = exec(tree.b, scope, context);
+    var b = bobj instanceof Prop ? bobj.context ? bobj.context[bobj.prop] : undefined : bobj;
+
+    if (ops.has(tree.op)) {
+      var res = ops.get(tree.op)(a, b, obj, context, scope, bobj);
+      return res;
+    }
+
+    throw new SyntaxError('Unknown operator: ' + tree.op);
+  }
+
+  var optimizeTypes = {};
+
+  var setOptimizeType = function setOptimizeType(types, fn) {
+    var _this14 = this;
+
+    _newArrowCheck(this, _this4);
+
+    types.forEach(function (type) {
+      _newArrowCheck(this, _this14);
+
+      optimizeTypes[type] = fn;
+    }.bind(this));
+  }.bind(undefined);
+
+  setOptimizeType(['>', '<', '>=', '<=', '==', '===', '!=', '!==', '&&', '||', '&', '|', '+', '-', '/', '*', '**', '%', '$+', '$-', '!', '~', 'group'], function (tree) {
+    _newArrowCheck(this, _this4);
+
+    return ops.get(tree.op)(tree.a, tree.b);
+  }.bind(undefined)); // setOptimizeType(['string'], (tree, strings) => strings[tree.b as number]);
   // setOptimizeType(['literal'], (tree, strings, literals) => {
   //   if(!literals[tree.b as number].b.length) {
   //     return literals[tree.b as number].a;
   //   }
   //   return tree;
   // });
-  setOptimizeType(['createArray'], (tree) => {
-      if (!tree.b.find((item) => item instanceof Lisp)) {
-          return ops.get(tree.op)(tree.a, tree.b);
-      }
-      return tree;
-  });
-  setOptimizeType(['prop'], (tree) => {
-      if (typeof tree.b === 'number' && tree.b % 1 === 0) {
-          return tree.a[tree.b];
-      }
-      return tree;
-  });
+
+  setOptimizeType(['createArray'], function (tree) {
+    var _this15 = this;
+
+    _newArrowCheck(this, _this4);
+
+    if (!tree.b.find(function (item) {
+      _newArrowCheck(this, _this15);
+
+      return item instanceof Lisp;
+    }.bind(this))) {
+      return ops.get(tree.op)(tree.a, tree.b);
+    }
+
+    return tree;
+  }.bind(undefined));
+  setOptimizeType(['prop'], function (tree) {
+    _newArrowCheck(this, _this4);
+
+    if (typeof tree.b === 'number' && tree.b % 1 === 0) {
+      return tree.a[tree.b];
+    }
+
+    return tree;
+  }.bind(undefined));
+
   function optimize(tree, strings, literals) {
-      if (!(tree instanceof Lisp)) {
-          if (Array.isArray(tree)) {
-              for (let i = 0; i < tree.length; i++) {
-                  tree[i] = optimize(tree[i], strings, literals);
-              }
-              return tree;
-          }
-          return tree;
+    if (!(tree instanceof Lisp)) {
+      if (Array.isArray(tree)) {
+        for (var i = 0; i < tree.length; i++) {
+          tree[i] = optimize(tree[i], strings, literals);
+        }
+
+        return tree;
       }
-      else {
-          tree.a = optimize(tree.a, strings, literals);
-          tree.b = optimize(tree.b, strings, literals);
-      }
-      if (!(tree.a instanceof Lisp) && !(tree.b instanceof Lisp) && optimizeTypes[tree.op]) {
-          return optimizeTypes[tree.op](tree, strings, literals);
-      }
+
       return tree;
+    } else {
+      tree.a = optimize(tree.a, strings, literals);
+      tree.b = optimize(tree.b, strings, literals);
+    }
+
+    if (!(tree.a instanceof Lisp) && !(tree.b instanceof Lisp) && optimizeTypes[tree.op]) {
+      return optimizeTypes[tree.op](tree, strings, literals);
+    }
+
+    return tree;
   }
-  class Sandbox {
-      constructor(globals = {}, prototypeWhitelist = new Map(), options = { audit: false }) {
-          const protWhiteList = new Map();
-          prototypeWhitelist.forEach((w, k) => {
-              protWhiteList.set(k, new Set(w));
-          });
-          const sandboxGlobal = new SandboxGlobal(globals);
-          this.context = {
-              sandbox: this,
-              globals,
-              prototypeWhitelist: protWhiteList,
-              options,
-              globalScope: new Scope(null, globals, sandboxGlobal),
-              sandboxGlobal,
-              Function: () => () => { },
-              eval: () => { },
-              auditReport: {
-                  prototypeAccess: {},
-                  globalsAccess: new Set()
-              }
+
+  var Sandbox = /*#__PURE__*/function () {
+    function Sandbox() {
+      var _this16 = this;
+
+      var globals = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var prototypeWhitelist = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : new Map();
+      var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {
+        audit: false
+      };
+
+      _classCallCheck(this, Sandbox);
+
+      var protWhiteList = new Map();
+      prototypeWhitelist.forEach(function (w, k) {
+        _newArrowCheck(this, _this16);
+
+        protWhiteList.set(k, new Set(w));
+      }.bind(this));
+      var sandboxGlobal = new SandboxGlobal(globals);
+      this.context = {
+        sandbox: this,
+        globals: globals,
+        prototypeWhitelist: protWhiteList,
+        options: options,
+        globalScope: new Scope(null, globals, sandboxGlobal),
+        sandboxGlobal: sandboxGlobal,
+        Function: function Function() {
+          var _this17 = this;
+
+          _newArrowCheck(this, _this16);
+
+          return function () {
+            _newArrowCheck(this, _this17);
+          }.bind(this);
+        }.bind(this),
+        eval: function _eval() {
+          _newArrowCheck(this, _this16);
+        }.bind(this),
+        auditReport: {
+          prototypeAccess: {},
+          globalsAccess: new Set()
+        }
+      };
+      this.context.Function = sandboxFunction(this.context);
+      this.context.eval = sandboxedEval(this.context.Function);
+    }
+
+    _createClass(Sandbox, [{
+      key: "executeTree",
+      value: function executeTree(executionTree) {
+        var _this18 = this;
+
+        var scopes = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+        var execTree = executionTree.tree;
+
+        var contextb = _objectSpread2({}, this.context, {
+          strings: executionTree.strings,
+          literals: executionTree.literals
+        });
+
+        var scope = this.context.globalScope;
+        var s;
+
+        while (s = scopes.shift()) {
+          if (_typeof(s) !== "object") continue;
+
+          if (s instanceof Scope) {
+            scope = s;
+          } else {
+            scope = new Scope(scope, s);
+          }
+        }
+
+        var context = Object.assign({}, contextb);
+
+        if (contextb.options.audit) {
+          context.auditReport = {
+            globalsAccess: new Set(),
+            prototypeAccess: {}
           };
-          this.context.Function = sandboxFunction(this.context);
-          this.context.eval = sandboxedEval(this.context.Function);
-      }
-      static get SAFE_GLOBALS() {
-          return {
-              Function,
-              console,
-              isFinite,
-              isNaN,
-              parseFloat,
-              parseInt,
-              decodeURI,
-              decodeURIComponent,
-              encodeURI,
-              encodeURIComponent,
-              escape,
-              unescape,
-              Boolean,
-              Number,
-              String,
-              Object,
-              Array,
-              Symbol,
-              Error,
-              EvalError,
-              RangeError,
-              ReferenceError,
-              SyntaxError,
-              TypeError,
-              URIError,
-              Int8Array,
-              Uint8Array,
-              Uint8ClampedArray,
-              Int16Array,
-              Uint16Array,
-              Int32Array,
-              Uint32Array,
-              Float32Array,
-              Float64Array,
-              Map,
-              Set,
-              WeakMap,
-              WeakSet,
-              Promise,
-              Intl,
-              JSON,
-              Math,
-          };
-      }
-      static get SAFE_PROTOTYPES() {
-          let protos = [
-              SandboxGlobal,
-              Function,
-              Boolean,
-              Object,
-              Number,
-              String,
-              Date,
-              RegExp,
-              Error,
-              Array,
-              Int8Array,
-              Uint8Array,
-              Uint8ClampedArray,
-              Int16Array,
-              Uint16Array,
-              Int32Array,
-              Uint32Array,
-              Float32Array,
-              Float64Array,
-              Map,
-              Set,
-              WeakMap,
-              WeakSet,
-              Promise,
-          ];
-          let map = new Map();
-          protos.forEach((proto) => {
-              map.set(proto, []);
-          });
-          return map;
-      }
-      static audit(code, scopes = []) {
-          let allowed = new Map();
-          return new Sandbox(globalThis, allowed, {
-              audit: true,
-          }).executeTree(Sandbox.parse(code), scopes);
-      }
-      static parse(code, strings = [], literals = []) {
-          // console.log('parse', str);
-          let str = code;
-          let quote;
-          let extract = "";
-          let escape = false;
-          let js = [];
-          let currJs = [];
-          if (strings) {
-              let extractSkip = 0;
-              for (let i = 0; i < str.length; i++) {
-                  let char = str[i];
-                  if (escape) {
-                      if (char === "$" && quote === '`') {
-                          extractSkip--;
-                          char = '$$';
-                      }
-                      else if (char === 'u') {
-                          let reg = /^[a-fA-F\d]{2,4}/.exec(str.substring(i + 1));
-                          let num;
-                          if (!reg) {
-                              num = Array.from(/^{[a-fA-F\d]+}/.exec(str.substring(i + 1)) || [""]);
-                          }
-                          else {
-                              num = Array.from(reg);
-                          }
-                          char = JSON.parse(`"\\u${num[0]}"`);
-                          str = str.substring(0, i - 1) + char + str.substring(i + (1 + num[0].length));
-                          i -= 1;
-                      }
-                      else if (char != '`') {
-                          char = JSON.parse(`"\\${char}"`);
-                      }
-                  }
-                  else if (char === '$' && quote === '`' && str[i + 1] !== '{') {
-                      extractSkip--;
-                      char = '$$';
-                  }
-                  if (quote === "`" && char === "$" && str[i + 1] === "{") {
-                      let skip = restOfExp(str.substring(i + 2), [/^}/]);
-                      currJs.push(skip);
-                      extractSkip += skip.length + 3;
-                      extract += `\${${currJs.length - 1}}`;
-                      i += skip.length + 2;
-                  }
-                  else if (!quote && (char === "'" || char === '"' || char === '`') && !escape) {
-                      currJs = [];
-                      extractSkip = 0;
-                      quote = char;
-                  }
-                  else if (quote === char && !escape) {
-                      let len;
-                      if (quote === '`') {
-                          literals.push({
-                              op: 'literal',
-                              a: extract,
-                              b: currJs
-                          });
-                          js.push(currJs);
-                          str = str.substring(0, i - extractSkip - 1) + `\`${literals.length - 1}\`` + str.substring(i + 1);
-                          len = (literals.length - 1).toString().length;
-                      }
-                      else {
-                          strings.push(extract);
-                          str = str.substring(0, i - extract.length - 1) + `"${strings.length - 1}"` + str.substring(i + 1);
-                          len = (strings.length - 1).toString().length;
-                      }
-                      quote = null;
-                      i -= extract.length - len;
-                      extract = "";
-                  }
-                  else if (quote && !(!escape && char === "\\")) {
-                      extractSkip += escape ? 1 + char.length : char.length;
-                      extract += char;
-                  }
-                  escape = quote && !escape && char === "\\";
-              }
-              str = str.replace(/(?<=(^|[^\w_$]))(var|let|const|typeof|return|instanceof|in)(?=([^\w_$]|$))/g, (match) => {
-                  return `#${match}#`;
-              }).replace(/\s/g, "").replace(/#/g, " ");
+        }
+
+        var returned = false;
+        var res;
+        if (!(execTree instanceof Array)) throw new SyntaxError('Bad execution tree');
+        execTree.map(function (tree) {
+          _newArrowCheck(this, _this18);
+
+          if (!returned) {
+            var r;
+
+            try {
+              r = exec(tree, scope, context);
+            } catch (e) {
+              throw new e.constructor(e.message);
+            }
+
+            if (tree instanceof Lisp && tree.op === 'return') {
+              returned = true;
+              res = r;
+            }
           }
-          js.forEach((j) => {
-              const a = j.map((skip) => this.parse(skip, strings, literals).tree[0]);
-              j.length = 0;
-              j.push(...a);
-          });
-          let parts = [];
-          let part;
-          let pos = 0;
-          while ((part = restOfExp(str.substring(pos), [/^;/]))) {
-              parts.push(part);
-              pos += part.length + 1;
-          }
-          parts = parts.filter(Boolean);
-          const tree = parts.filter((str) => str.length).map((str) => {
-              try {
-                  return lispify(str);
-              }
-              catch (e) {
-                  throw new ParseError(e.message, str);
-              }
-          }).map((tree) => optimize(tree, strings, literals));
-          return { tree, strings, literals };
+
+          return null;
+        }.bind(this));
+        res = res instanceof Prop ? res.context[res.prop] : res;
+        return {
+          auditReport: context.auditReport,
+          result: res
+        };
       }
-      executeTree(executionTree, scopes = []) {
-          const execTree = executionTree.tree;
-          const contextb = { ...this.context, strings: executionTree.strings, literals: executionTree.literals };
-          let scope = this.context.globalScope;
-          let s;
-          while (s = scopes.shift()) {
-              if (typeof s !== "object")
-                  continue;
-              if (s instanceof Scope) {
-                  scope = s;
-              }
-              else {
-                  scope = new Scope(scope, s);
-              }
+    }, {
+      key: "compile",
+      value: function compile(code) {
+        var _this19 = this;
+
+        var executionTree = Sandbox.parse(code);
+        return function () {
+          _newArrowCheck(this, _this19);
+
+          for (var _len5 = arguments.length, scopes = new Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
+            scopes[_key5] = arguments[_key5];
           }
-          let context = Object.assign({}, contextb);
-          if (contextb.options.audit) {
-              context.auditReport = {
-                  globalsAccess: new Set(),
-                  prototypeAccess: {},
-              };
-          }
-          let returned = false;
-          let res;
-          if (!(execTree instanceof Array))
-              throw new SyntaxError('Bad execution tree');
-          execTree.map(tree => {
-              if (!returned) {
-                  let r;
-                  try {
-                      r = exec(tree, scope, context);
-                  }
-                  catch (e) {
-                      throw new e.constructor(e.message);
-                  }
-                  if (tree instanceof Lisp && tree.op === 'return') {
-                      returned = true;
-                      res = r;
-                  }
+
+          return this.executeTree(executionTree, scopes).result;
+        }.bind(this);
+      }
+    }], [{
+      key: "audit",
+      value: function audit(code) {
+        var scopes = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+        var allowed = new Map();
+        return new Sandbox(globalThis, allowed, {
+          audit: true
+        }).executeTree(Sandbox.parse(code), scopes);
+      }
+    }, {
+      key: "parse",
+      value: function parse(code) {
+        var _this20 = this;
+
+        var strings = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+        var literals = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+        // console.log('parse', str);
+        var str = code;
+        var quote;
+        var extract = "";
+        var escape = false;
+        var js = [];
+        var currJs = [];
+
+        if (strings) {
+          var extractSkip = 0;
+
+          for (var i = 0; i < str.length; i++) {
+            var _char2 = str[i];
+
+            if (escape) {
+              if (_char2 === "$" && quote === '`') {
+                extractSkip--;
+                _char2 = '$$';
+              } else if (_char2 === 'u') {
+                var reg = /^[a-fA-F\d]{2,4}/.exec(str.substring(i + 1));
+                var num = void 0;
+
+                if (!reg) {
+                  num = Array.from(/^{[a-fA-F\d]+}/.exec(str.substring(i + 1)) || [""]);
+                } else {
+                  num = Array.from(reg);
+                }
+
+                _char2 = JSON.parse("\"\\u".concat(num[0], "\""));
+                str = str.substring(0, i - 1) + _char2 + str.substring(i + (1 + num[0].length));
+                i -= 1;
+              } else if (_char2 != '`') {
+                _char2 = JSON.parse("\"\\".concat(_char2, "\""));
               }
-              return null;
-          });
-          res = res instanceof Prop ? res.context[res.prop] : res;
-          return { auditReport: context.auditReport, result: res };
+            } else if (_char2 === '$' && quote === '`' && str[i + 1] !== '{') {
+              extractSkip--;
+              _char2 = '$$';
+            }
+
+            if (quote === "`" && _char2 === "$" && str[i + 1] === "{") {
+              var skip = _restOfExp(str.substring(i + 2), [/^}/]);
+
+              currJs.push(skip);
+              extractSkip += skip.length + 3;
+              extract += "${".concat(currJs.length - 1, "}");
+              i += skip.length + 2;
+            } else if (!quote && (_char2 === "'" || _char2 === '"' || _char2 === '`') && !escape) {
+              currJs = [];
+              extractSkip = 0;
+              quote = _char2;
+            } else if (quote === _char2 && !escape) {
+              var len = void 0;
+
+              if (quote === '`') {
+                literals.push({
+                  op: 'literal',
+                  a: extract,
+                  b: currJs
+                });
+                js.push(currJs);
+                str = str.substring(0, i - extractSkip - 1) + "`".concat(literals.length - 1, "`") + str.substring(i + 1);
+                len = (literals.length - 1).toString().length;
+              } else {
+                strings.push(extract);
+                str = str.substring(0, i - extract.length - 1) + "\"".concat(strings.length - 1, "\"") + str.substring(i + 1);
+                len = (strings.length - 1).toString().length;
+              }
+
+              quote = null;
+              i -= extract.length - len;
+              extract = "";
+            } else if (quote && !(!escape && _char2 === "\\")) {
+              extractSkip += escape ? 1 + _char2.length : _char2.length;
+              extract += _char2;
+            }
+
+            escape = quote && !escape && _char2 === "\\";
+          }
+
+          str = str.replace(/(?<=(^|[^\w_$]))(var|let|const|typeof|return|instanceof|in)(?=([^\w_$]|$))/g, function (match) {
+            _newArrowCheck(this, _this20);
+
+            return "#".concat(match, "#");
+          }.bind(this)).replace(/\s/g, "").replace(/#/g, " ");
+        }
+
+        js.forEach(function (j) {
+          var _this21 = this;
+
+          _newArrowCheck(this, _this20);
+
+          var a = j.map(function (skip) {
+            _newArrowCheck(this, _this21);
+
+            return this.parse(skip, strings, literals).tree[0];
+          }.bind(this));
+          j.length = 0;
+          j.push.apply(j, _toConsumableArray(a));
+        }.bind(this));
+        var parts = [];
+        var part;
+        var pos = 0;
+
+        while (part = _restOfExp(str.substring(pos), [/^;/])) {
+          parts.push(part);
+          pos += part.length + 1;
+        }
+
+        parts = parts.filter(Boolean);
+        var tree = parts.filter(function (str) {
+          _newArrowCheck(this, _this20);
+
+          return str.length;
+        }.bind(this)).map(function (str) {
+          _newArrowCheck(this, _this20);
+
+          try {
+            return lispify(str);
+          } catch (e) {
+            throw new ParseError(e.message, str);
+          }
+        }.bind(this)).map(function (tree) {
+          _newArrowCheck(this, _this20);
+
+          return optimize(tree, strings, literals);
+        }.bind(this));
+        return {
+          tree: tree,
+          strings: strings,
+          literals: literals
+        };
       }
-      compile(code) {
-          const executionTree = Sandbox.parse(code);
-          return (...scopes) => {
-              return this.executeTree(executionTree, scopes).result;
-          };
+    }, {
+      key: "SAFE_GLOBALS",
+      get: function get() {
+        return {
+          Function: Function,
+          console: console,
+          isFinite: isFinite,
+          isNaN: isNaN,
+          parseFloat: parseFloat,
+          parseInt: parseInt,
+          decodeURI: decodeURI,
+          decodeURIComponent: decodeURIComponent,
+          encodeURI: encodeURI,
+          encodeURIComponent: encodeURIComponent,
+          escape: escape,
+          unescape: unescape,
+          Boolean: Boolean,
+          Number: Number,
+          String: String,
+          Object: Object,
+          Array: Array,
+          Symbol: Symbol,
+          Error: Error,
+          EvalError: EvalError,
+          RangeError: RangeError,
+          ReferenceError: ReferenceError,
+          SyntaxError: SyntaxError,
+          TypeError: TypeError,
+          URIError: URIError,
+          Int8Array: Int8Array,
+          Uint8Array: Uint8Array,
+          Uint8ClampedArray: Uint8ClampedArray,
+          Int16Array: Int16Array,
+          Uint16Array: Uint16Array,
+          Int32Array: Int32Array,
+          Uint32Array: Uint32Array,
+          Float32Array: Float32Array,
+          Float64Array: Float64Array,
+          Map: Map,
+          Set: Set,
+          WeakMap: WeakMap,
+          WeakSet: WeakSet,
+          Promise: Promise,
+          Intl: Intl,
+          JSON: JSON,
+          Math: Math
+        };
       }
-      ;
-  }
+    }, {
+      key: "SAFE_PROTOTYPES",
+      get: function get() {
+        var _this22 = this;
+
+        var protos = [SandboxGlobal, Function, Boolean, Object, Number, String, Date, RegExp, Error, Array, Int8Array, Uint8Array, Uint8ClampedArray, Int16Array, Uint16Array, Int32Array, Uint32Array, Float32Array, Float64Array, Map, Set, WeakMap, WeakSet, Promise];
+        var map = new Map();
+        protos.forEach(function (proto) {
+          _newArrowCheck(this, _this22);
+
+          map.set(proto, []);
+        }.bind(this));
+        return map;
+      }
+    }]);
+
+    return Sandbox;
+  }();
 
   // https://github.com/stimulusjs/stimulus/blob/master/packages/%40stimulus/core/src/application.ts
 
@@ -7285,13 +10325,13 @@
 
   // `Reflect.set` method
   // https://tc39.github.io/ecma262/#sec-reflect.set
-  function set$2(target, propertyKey, V /* , receiver */) {
+  function set$3(target, propertyKey, V /* , receiver */) {
     var receiver = arguments.length < 4 ? target : arguments[3];
     var ownDescriptor = objectGetOwnPropertyDescriptor.f(anObject(target), propertyKey);
     var existingDescriptor, prototype;
     if (!ownDescriptor) {
       if (isObject(prototype = objectGetPrototypeOf(target))) {
-        return set$2(prototype, propertyKey, V, receiver);
+        return set$3(prototype, propertyKey, V, receiver);
       }
       ownDescriptor = createPropertyDescriptor(0);
     }
@@ -7316,10 +10356,10 @@
   });
 
   _export({ target: 'Reflect', stat: true, forced: MS_EDGE_BUG }, {
-    set: set$2
+    set: set$3
   });
 
-  function wrap(data, mutationCallback) {
+  function wrap$1(data, mutationCallback) {
     /* IE11-ONLY:START */
     return wrapForIe11(data, mutationCallback);
   }
@@ -7472,7 +10512,7 @@
         var updateDom = debounce(function () {
           self.updateElements(self.$el);
         }, 0);
-        return wrap(data, function (target, key) {
+        return wrap$1(data, function (target, key) {
           var _this3 = this;
 
           _newArrowCheck(this, _this2);

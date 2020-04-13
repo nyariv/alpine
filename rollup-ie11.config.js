@@ -21,7 +21,10 @@ export default {
         filesize(),
         babel({
             babelrc: false,
-            exclude: 'node_modules/**',
+            include: [
+                'src/**',
+                'node_modules/@nyariv/**',
+            ],
             presets: [
                 [
                     "@babel/preset-env",
