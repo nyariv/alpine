@@ -23,11 +23,11 @@ test('$el', async () => {
 
 test('$el doesnt return a proxy', async () => {
     window.isProxy
-    window.data = {
+    Alpine.scope('data', {
         setIsProxy: function (el) {
             window.isProxy = !! el.isProxy
         }
-    }
+    })
 
     document.body.innerHTML = `
         <div x-data="data">

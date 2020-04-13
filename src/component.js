@@ -7,6 +7,8 @@ import { registerModelListener } from './directives/model'
 import { registerListener } from './directives/on'
 import { unwrap, wrap } from './observable'
 
+export const globalScope = {};
+
 export default class Component {
     constructor(el, seedDataForCloning = null) {
         this.$el = el
@@ -15,7 +17,7 @@ export default class Component {
         const dataExpression = dataAttr === '' ? '{}' : dataAttr
         const initExpression = this.$el.getAttribute('x-init')
 
-        this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, window)
+        this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, globalScope)
 
         /* IE11-ONLY:START */
             // For IE11, add our magic properties to the original data for access.
@@ -295,14 +297,14 @@ export default class Component {
         return saferEval(expression, this.$data, {
             ...extraVars(),
             $dispatch: this.getDispatchFunction(el),
-        })
+        }, globalScope)
     }
 
     evaluateCommandExpression(el, expression, extraVars = () => {}) {
         return saferEvalNoReturn(expression, this.$data, {
             ...extraVars(),
             $dispatch: this.getDispatchFunction(el),
-        })
+        }, globalScope)
     }
 
     getDispatchFunction (el) {
@@ -383,7 +385,7 @@ export default class Component {
         return new Proxy(refObj, {
             get(object, property) {
                 if (property === '$isAlpineProxy') return true
-
+                if (property === 'hasOwnProperty') return (key) => this.has(null, key);
                 var ref
 
                 // We can't just query the DOM because it's hard to filter out refs in
@@ -395,6 +397,21 @@ export default class Component {
                 })
 
                 return ref
+            },
+            has(target, property) {
+                if (property === '$isAlpineProxy') return true
+
+                var ref
+
+                // We can't just query the DOM because it's hard to filter out refs in
+                // nested components.
+                self.walkAndSkipNestedComponents(self.$el, el => {
+                    if (el.hasAttribute('x-ref') && el.getAttribute('x-ref') === property) {
+                        ref = el
+                    }
+                })
+
+                return !!ref
             }
         })
     }

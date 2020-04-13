@@ -66,23 +66,20 @@ allowedPrototypes.set(MouseEvent, [])
 const sandbox = new Sandbox(allowedGlobals, allowedPrototypes)
 const expressionCache = {}
 
-export function saferEval(expression, dataContext, additionalHelperVariables = {}) {
-    const code = `return ${expression};`
+export function saferEval(expression, dataContext, additionalHelperVariables = {}, ...scopes) {
+    const code = `return ${expression};`;
     const exec = expressionCache[code] || sandbox.compile(code)
-    expressionCache[code] = exec
-    return exec(dataContext, additionalHelperVariables)
+    expressionCache[code] = exec;
+    return exec(...scopes, dataContext, additionalHelperVariables, {})
 }
 
-export function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}) {
+export function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}, ...scopes) {
     const code = `${expression}`
-    const codeRet = `return ${expression};`
 
     // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
     if (Object.keys(dataContext).includes(expression)) {
-        const exec = expressionCache[codeRet] || sandbox.compile(codeRet)
-        expressionCache[codeRet] = exec
-        const methodReference = exec(dataContext, additionalHelperVariables)
+        const methodReference = dataContext[expression]
         if (typeof methodReference === 'function') {
             return methodReference.call(dataContext, additionalHelperVariables['$event'])
         }
@@ -90,8 +87,8 @@ export function saferEvalNoReturn(expression, dataContext, additionalHelperVaria
     }
 
     const exec = expressionCache[code] || sandbox.compile(code)
-    expressionCache[code] = exec
-    return exec(dataContext, additionalHelperVariables)
+    expressionCache[code] = exec;
+    return exec(...scopes, dataContext, additionalHelperVariables, {})
 }
 
 const xAttrRE = /^x-(on|bind|data|text|html|model|if|for|show|cloak|transition|ref)\b/

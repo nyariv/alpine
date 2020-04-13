@@ -1,4 +1,4 @@
-import Component from './component'
+import Component , { globalScope } from './component'
 import { domReady, isTesting } from './utils'
 
 const Alpine = {
@@ -83,6 +83,13 @@ const Alpine = {
         if (! newEl.__x) {
             newEl.__x = new Component(newEl, component.getUnobservedData())
         }
+    },
+
+    scope: function (name, data) {
+        if (data !== undefined) {
+            globalScope[name] = data;
+        }
+        return globalScope[name];
     }
 }
 

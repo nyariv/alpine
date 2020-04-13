@@ -7,12 +7,12 @@ global.MutationObserver = class {
 
 test('x-init', async () => {
     var spanValue
-    window.setSpanValue = (el) => {
+    Alpine.scope('setSpanValue', (el) => {
         spanValue = el.innerHTML
-    }
+    })
 
     document.body.innerHTML = `
-        <div x-data="{ foo: 'bar' }" x-init="window.setSpanValue($refs.foo)">
+        <div x-data="{ foo: 'bar' }" x-init="setSpanValue($refs.foo)">
             <span x-text="foo" x-ref="foo">baz</span>
         </div>
     `
@@ -25,20 +25,22 @@ test('x-init', async () => {
 test('x-init from data function with callback return for "x-mounted" functionality', async () => {
     var valueA
     var valueB
-    window.setValueA = (el) => { valueA = el.innerHTML }
-    window.setValueB = (el) => { valueB = el.innerText }
-    window.data = function() {
+    var setValueA = (el) => { valueA = el.innerHTML }
+    var setValueB = (el) => { valueB = el.innerText }
+    Alpine.scope('setValueA', setValueA)
+    Alpine.scope('setValueB', setValueB)
+    Alpine.scope('data', function() {
         return {
             foo: 'bar',
             init() {
-                window.setValueA(this.$refs.foo)
+                setValueA(this.$refs.foo)
 
                 return () => {
-                    window.setValueB(this.$refs.foo)
+                    setValueB(this.$refs.foo)
                 }
             }
         }
-    }
+    });
 
     document.body.innerHTML = `
         <div x-data="data()" x-init="init()">

@@ -209,10 +209,11 @@ test('Alpine mutations don\'t trigger (like x-if and x-for) MutationObserver', a
         constructor(callback) { runObservers.push(callback) }
         observe() {}
     }
-    window.bob = () => {
+
+    Alpine.scope('bob', () => {
         evaluations++
         return 'lob'
-    }
+    })
 
     document.body.innerHTML = `
         <div x-data="{ foo: 'bar' }" id="component">
@@ -285,9 +286,9 @@ test('nested components only get registered once on initialization', async () =>
     }
 
     var initCount = 0
-    window.registerInit = function () {
+    Alpine.scope('registerInit', function () {
         initCount = initCount + 1
-    }
+    })
 
     document.body.innerHTML = `
         <div x-data x-init="registerInit()">
