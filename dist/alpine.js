@@ -1486,13 +1486,13 @@
   allowedPrototypes.set(MouseEvent, []);
   const sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
   const expressionCache = {};
-  function saferEval(expression, dataContext, additionalHelperVariables = {}, ...scopes) {
+  function saferEval(expression, dataContext, additionalHelperVariables = {}) {
     const code = `return ${expression};`;
     const exec = expressionCache[code] || sandbox.compile(code);
     expressionCache[code] = exec;
-    return exec(...scopes, dataContext, additionalHelperVariables, {});
+    return exec(window, dataContext, additionalHelperVariables);
   }
-  function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}, ...scopes) {
+  function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}) {
     const code = `${expression}`; // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
 
@@ -1508,7 +1508,7 @@
 
     const exec = expressionCache[code] || sandbox.compile(code);
     expressionCache[code] = exec;
-    return exec(...scopes, dataContext, additionalHelperVariables, {});
+    return exec(window, dataContext, additionalHelperVariables);
   }
   const xAttrRE = /^x-(on|bind|data|text|html|model|if|for|show|cloak|transition|ref)\b/;
   function isXAttr(attr) {
@@ -2641,7 +2641,7 @@
       const dataAttr = this.$el.getAttribute('x-data');
       const dataExpression = dataAttr === '' ? '{}' : dataAttr;
       const initExpression = this.$el.getAttribute('x-init');
-      this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, globalScope);
+      this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, {});
       // Construct a Proxy-based observable. This will be used to handle reactivity.
 
       let {
@@ -2895,13 +2895,13 @@
     evaluateReturnExpression(el, expression, extraVars = () => {}) {
       return saferEval(expression, this.$data, _objectSpread2({}, extraVars(), {
         $dispatch: this.getDispatchFunction(el)
-      }), globalScope);
+      }));
     }
 
     evaluateCommandExpression(el, expression, extraVars = () => {}) {
       return saferEvalNoReturn(expression, this.$data, _objectSpread2({}, extraVars(), {
         $dispatch: this.getDispatchFunction(el)
-      }), globalScope);
+      }));
     }
 
     getDispatchFunction(el) {

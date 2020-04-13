@@ -6286,12 +6286,7 @@
     var code = "return ".concat(expression, ";");
     var exec = expressionCache[code] || sandbox.compile(code);
     expressionCache[code] = exec;
-
-    for (var _len = arguments.length, scopes = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
-      scopes[_key - 3] = arguments[_key];
-    }
-
-    return exec.apply(void 0, scopes.concat([dataContext, additionalHelperVariables, {}]));
+    return exec(window, dataContext, additionalHelperVariables);
   }
   function saferEvalNoReturn(expression, dataContext) {
     var additionalHelperVariables = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
@@ -6310,12 +6305,7 @@
 
     var exec = expressionCache[code] || sandbox.compile(code);
     expressionCache[code] = exec;
-
-    for (var _len2 = arguments.length, scopes = new Array(_len2 > 3 ? _len2 - 3 : 0), _key2 = 3; _key2 < _len2; _key2++) {
-      scopes[_key2 - 3] = arguments[_key2];
-    }
-
-    return exec.apply(void 0, scopes.concat([dataContext, additionalHelperVariables, {}]));
+    return exec(window, dataContext, additionalHelperVariables);
   }
   var xAttrRE = /^x-(on|bind|data|text|html|model|if|for|show|cloak|transition|ref)\b/;
   function isXAttr(attr) {
@@ -7405,7 +7395,7 @@
       var dataAttr = this.$el.getAttribute('x-data');
       var dataExpression = dataAttr === '' ? '{}' : dataAttr;
       var initExpression = this.$el.getAttribute('x-init');
-      this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, globalScope);
+      this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, {});
       /* IE11-ONLY:START */
       // For IE11, add our magic properties to the original data for access.
       // The Proxy polyfill does not allow properties to be added after creation.
@@ -7782,7 +7772,7 @@
         }.bind(this);
         return saferEval(expression, this.$data, _objectSpread2({}, extraVars(), {
           $dispatch: this.getDispatchFunction(el)
-        }), globalScope);
+        }));
       }
     }, {
       key: "evaluateCommandExpression",
@@ -7794,7 +7784,7 @@
         }.bind(this);
         return saferEvalNoReturn(expression, this.$data, _objectSpread2({}, extraVars(), {
           $dispatch: this.getDispatchFunction(el)
-        }), globalScope);
+        }));
       }
     }, {
       key: "getDispatchFunction",
