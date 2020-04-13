@@ -37,12 +37,11 @@ test('x-data can use attributes from a reusable function', async () => {
             <span x-text="foo"></span>
         </div>
     `
-
-    window.test = function () {
-        return {
-            foo: 'bar',
+        test = function() {
+            return {
+                foo: 'bar',
+            }
         }
-    }
 
     Alpine.start()
 

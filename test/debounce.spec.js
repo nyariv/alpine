@@ -94,7 +94,7 @@ test('x-model with debounce modifier', async () => {
 
     expect(document.querySelector('span').innerText).toEqual('')
 
-    await timeout(30)
+    await timeout(20)
 
     expect(document.querySelector('span').innerText).toEqual('foo')
 })

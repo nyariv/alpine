@@ -98,36 +98,25 @@ test('.window modifier', async () => {
 })
 
 test('unbind global event handler when element is removed', async () => {
-    window.data = function() {
-        return {
-            callCount: 0
-        }
-    }
+    document._callCount = 0
 
     document.body.innerHTML = `
-        <div x-data="data()">
-            <span x-text="callCount"></span>
-            <div id="listener" x-on:click.window="callCount += 1"></div>
+        <div x-data="{}">
+            <div x-on:click.window="document._callCount += 1"></div>
         </div>
     `
 
     Alpine.start()
 
-    expect(document.querySelector('span').innerText).toEqual(0)
+    document.body.click()
+
+    document.body.innerHTML = ''
 
     document.body.click()
 
     await new Promise(resolve => setTimeout(resolve, 1))
 
-    expect(document.querySelector('span').innerText).toEqual(1)
-
-    document.querySelector('#listener').remove()
-
-    document.body.click()
-
-    await new Promise(resolve => setTimeout(resolve, 1))
-
-    expect(document.querySelector('span').innerText).toEqual(1)
+    expect(document._callCount).toEqual(1)
 })
 
 test('.document modifier', async () => {

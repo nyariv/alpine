@@ -8,7 +8,7 @@ global.MutationObserver = class {
 test('Proxy does not error in strict mode when reactivity is suspended', async () => {
     "use strict"
 
-    window.statCounter = function () {
+    global.statCounter = function () {
         return {
             count: 0,
             init() {
@@ -16,7 +16,6 @@ test('Proxy does not error in strict mode when reactivity is suspended', async (
             }
         }
     }
-
     document.body.innerHTML = `
         <div class="my-48">
             <div x-data="statCounter()" x-init="init()">
