@@ -215,6 +215,20 @@
           return func(code)();
       }
   }
+  function sandboxedSetTimeout(func) {
+      return function sandboxSetTimeout(handler, ...args) {
+          if (typeof handler !== 'string')
+              return setTimeout(handler, ...args);
+          return setTimeout(func(handler), args[0]);
+      };
+  }
+  function sandboxedSetInterval(func) {
+      return function sandboxSetInterval(handler, ...args) {
+          if (typeof handler !== 'string')
+              return setInterval(handler, ...args);
+          return setTimeout(func(handler), args[0]);
+      };
+  }
   let expectTypes = {
       op: {
           types: { op: /^(\/|\*\*(?!\=)|\*(?!\=)|\%(?!\=))/ },
@@ -224,8 +238,7 @@
               'exp',
               'modifier',
               'incrementerBefore',
-          ],
-          firstChar: new Set([...'/*%'])
+          ]
       },
       splitter: {
           types: {
@@ -237,8 +250,7 @@
               'exp',
               'modifier',
               'incrementerBefore',
-          ],
-          firstChar: new Set([...'&|<>!= +-'])
+          ]
       },
       if: {
           types: {
@@ -247,8 +259,7 @@
           },
           next: [
               'expEnd'
-          ],
-          firstChar: new Set([...'?:'])
+          ]
       },
       assignment: {
           types: {
@@ -262,15 +273,13 @@
               'exp',
               'modifier',
               'incrementerBefore',
-          ],
-          firstChar: new Set([...'+-=*%^&|/'])
+          ]
       },
       incrementerBefore: {
           types: { incrementerBefore: /^(\+\+|\-\-)/ },
           next: [
               'prop',
-          ],
-          firstChar: new Set([...'+-'])
+          ]
       },
       incrementerAfter: {
           types: { incrementerAfter: /^(\+\+|\-\-)/ },
@@ -278,8 +287,7 @@
               'splitter',
               'op',
               'expEnd'
-          ],
-          firstChar: new Set([...'+-'])
+          ]
       },
       expEdge: {
           types: {
@@ -293,8 +301,7 @@
               'if',
               'dot',
               'expEnd'
-          ],
-          firstChar: new Set([...'[('])
+          ]
       },
       modifier: {
           types: {
@@ -310,8 +317,7 @@
               'value',
               'prop',
               'incrementerBefore',
-          ],
-          firstChar: new Set([...'!~-+ '])
+          ]
       },
       exp: {
           types: {
@@ -326,8 +332,7 @@
               'if',
               'dot',
               'expEnd'
-          ],
-          firstChar: new Set([...'{[('])
+          ]
       },
       dot: {
           types: {
@@ -342,8 +347,7 @@
               'if',
               'dot',
               'expEnd'
-          ],
-          firstChar: new Set([...'.'])
+          ]
       },
       prop: {
           types: {
@@ -358,8 +362,7 @@
               'if',
               'dot',
               'expEnd'
-          ],
-          firstChar: new Set([...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYX$_'])
+          ]
       },
       value: {
           types: {
@@ -378,8 +381,7 @@
               'if',
               'dot',
               'expEnd'
-          ],
-          firstChar: new Set([...'-"`tfunNI0123456789'])
+          ]
       },
       function: {
           types: {
@@ -387,8 +389,7 @@
           },
           next: [
               'expEnd'
-          ],
-          firstChar: new Set([...'(abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYX$_'])
+          ]
       },
       initialize: {
           types: {
@@ -402,8 +403,7 @@
               'modifier',
               'incrementerBefore',
               'expEnd'
-          ],
-          firstChar: new Set([...' '])
+          ]
       },
       spreadObject: {
           types: {
@@ -413,8 +413,7 @@
               'value',
               'exp',
               'prop',
-          ],
-          firstChar: new Set([...'.'])
+          ]
       },
       spreadArray: {
           types: {
@@ -424,10 +423,9 @@
               'value',
               'exp',
               'prop',
-          ],
-          firstChar: new Set([...'.'])
+          ]
       },
-      expEnd: { types: {}, next: [], firstChar: new Set() },
+      expEnd: { types: {}, next: [] },
       expStart: {
           types: {
               return: /^ return /,
@@ -440,8 +438,7 @@
               'modifier',
               'incrementerBefore',
               'expEnd'
-          ],
-          firstChar: new Set([...' '])
+          ]
       }
   };
   let closings = {
@@ -460,8 +457,8 @@
       '"': /^\"/,
       "`": /^\`/
   };
+  const okFirstChars = /^[\+\-~ !]/;
   const restOfExp = (part, tests, quote) => {
-      let okFirstChars = /^[\+\-~ !]/;
       let isStart = true;
       tests = tests || [
           expectTypes.op.types.op,
@@ -476,7 +473,7 @@
           let char = part[i];
           if (quote === '"' || quote === "'" || quote === "`") {
               if (quote === "`" && char === "$" && part[i + 1] === "{" && !escape) {
-                  let skip = restOfExp(part.substring(i + 2), [/^}/]);
+                  let skip = restOfExp(part.substring(i + 2), [closingsRegex['{']]);
                   i += skip.length + 2;
               }
               else if (char === quote && !escape) {
@@ -522,14 +519,14 @@
       if (obj.context === undefined) {
           throw new ReferenceError(`Cannot assign value to undefined.`);
       }
-      if (typeof obj.context !== 'object') {
+      if (typeof obj.context !== 'object' && typeof obj.context !== 'function') {
           throw new SyntaxError(`Cannot assign value to a primitive.`);
       }
       if (obj.isConst) {
           throw new TypeError(`Cannot set value to const variable '${obj.prop}'`);
       }
       if (obj.isGlobal) {
-          throw new SandboxError(`Cannot override property of global variable '${obj.prop}'`);
+          throw new SandboxError(`Cannot assign property '${obj.prop}' of a global object`);
       }
       if (typeof obj.context[obj.prop] === 'function' && !obj.context.hasOwnProperty(obj.prop)) {
           throw new SandboxError(`Override prototype property '${obj.prop}' not allowed`);
@@ -538,7 +535,7 @@
   let ops2 = {
       'prop': (a, b, obj, context, scope) => {
           if (a === null) {
-              throw new TypeError(`Cannot get propety ${b} of null`);
+              throw new TypeError(`Cannot get property ${b} of null`);
           }
           if (typeof a === 'undefined') {
               let prop = scope.get(b);
@@ -548,16 +545,9 @@
                   if (context.options.audit) {
                       context.auditReport.globalsAccess.add(b);
                   }
-                  if (context.sandboxGlobal[b] === Function) {
-                      return context.Function;
-                  }
-                  if (context.sandboxGlobal[b] === eval) {
-                      return context.eval;
-                  }
-                  const fn = context.sandboxGlobal[b];
-                  if (setTimeout === fn || fn === setInterval) {
-                      return undefined;
-                  }
+                  const rep = context.replacements.get(context.sandboxGlobal[b]);
+                  if (rep)
+                      return rep;
               }
               if (prop.context && prop.context[b] === globalThis) {
                   return context.globalScope.get('this');
@@ -574,7 +564,10 @@
           if (typeof a === 'boolean') {
               a = new Boolean(a);
           }
-          ok = a.hasOwnProperty(b) || parseInt(b, 10) + "" === b + "";
+          if (typeof a.hasOwnProperty === 'undefined') {
+              return new Prop(undefined, b);
+          }
+          ok = typeof a !== 'function' && (a.hasOwnProperty(b) || typeof b === 'number');
           if (!ok && context.options.audit) {
               ok = true;
               if (typeof b === 'string') {
@@ -590,25 +583,36 @@
               }
           }
           if (!ok) {
-              let prot = a.constructor.prototype;
-              do {
-                  const whitelist = context.prototypeWhitelist.get(prot.constructor);
-                  ok = whitelist && (!whitelist.size || whitelist.has(b));
-                  if (ok)
-                      break;
-              } while (prot = Object.getPrototypeOf(prot));
-          }
-          if (ok) {
-              if (a[b] === Function) {
-                  return context.Function;
+              if (typeof a === 'function') {
+                  if (!['name', 'length', 'constructor'].includes(b) && a.hasOwnProperty(b)) {
+                      const whitelist = context.prototypeWhitelist.get(a);
+                      if (whitelist && (!whitelist.size || whitelist.has(b))) ;
+                      else {
+                          throw new SandboxError(`Static method or property access not permitted: ${a.name}.${b}`);
+                      }
+                  }
               }
-              if (a[b] === globalThis) {
-                  return context.globalScope.get('this');
+              else if (b !== 'constructor') {
+                  let prot = a.constructor.prototype;
+                  do {
+                      if (prot.hasOwnProperty(b)) {
+                          const whitelist = context.prototypeWhitelist.get(prot.constructor);
+                          if (whitelist && (!whitelist.size || whitelist.has(b))) {
+                              break;
+                          }
+                          throw new SandboxError(`Method or property access not permitted: ${prot.constructor.name}.${b}`);
+                      }
+                  } while (prot = Object.getPrototypeOf(prot));
               }
-              let g = obj.isGlobal || a.constructor === Function;
-              return new Prop(a, b, false, g);
           }
-          throw Error(`Method or property access prevented: ${a.constructor.name}.${b}`);
+          const rep = context.replacements.get(a[b]);
+          if (rep)
+              return rep;
+          if (a[b] === globalThis) {
+              return context.globalScope.get('this');
+          }
+          let g = obj.isGlobal || (typeof a === 'function' && a.name !== 'sandboxArrowFunction') || context.globalsWhitelist.has(a);
+          return new Prop(a, b, false, g);
       },
       'call': (a, b, obj, context, scope) => {
           if (context.options.forbidMethodCalls)
@@ -687,10 +691,22 @@
       },
       '!': (a, b) => !b,
       '~': (a, b) => ~b,
-      '++$': (a, b, obj) => ++obj.context[obj.prop],
-      '$++': (a, b, obj) => obj.context[obj.prop]++,
-      '--$': (a, b, obj) => --obj.context[obj.prop],
-      '$--': (a, b, obj) => obj.context[obj.prop]--,
+      '++$': (a, b, obj) => {
+          assignCheck(obj);
+          return ++obj.context[obj.prop];
+      },
+      '$++': (a, b, obj) => {
+          assignCheck(obj);
+          return obj.context[obj.prop]++;
+      },
+      '--$': (a, b, obj) => {
+          assignCheck(obj);
+          return --obj.context[obj.prop];
+      },
+      '$--': (a, b, obj) => {
+          assignCheck(obj);
+          return obj.context[obj.prop]--;
+      },
       '=': (a, b, obj, context, scope, bobj) => {
           assignCheck(obj);
           obj.context[obj.prop] = b;
@@ -775,7 +791,7 @@
           return new Prop(scope.const, a, false, bobj && bobj.isGlobal);
       },
       'arrowFunc': (a, b, obj, context, scope) => {
-          return (...args) => {
+          const sandboxArrowFunction = (...args) => {
               const vars = {};
               a.forEach((arg, i) => {
                   vars[arg] = args[i];
@@ -786,6 +802,7 @@
                   literals: context.literals,
               }, [new Scope(scope, vars)]).result;
           };
+          return sandboxArrowFunction;
       }
   };
   let ops = new Map();
@@ -874,23 +891,13 @@
           b: l,
       }));
   });
-  setLispType(['op'], (type, part, res, expect, ctx) => {
+  setLispType(['inverse', 'not', 'negative', 'positive', 'typeof', 'op'], (type, part, res, expect, ctx) => {
       let extract = restOfExp(part.substring(res[0].length));
-      ctx.lispTree = new Lisp({
-          op: res[0],
-          a: ctx.lispTree,
-          b: lispify(extract),
-      });
-      ctx.lispTree = lispify(part.substring(extract.length + res[0].length), restOfExp.next, ctx.lispTree);
-  });
-  setLispType(['inverse', 'not', 'negative', 'positive', 'typeof'], (type, part, res, expect, ctx) => {
-      let extract = restOfExp(part.substring(res[0].length));
-      ctx.lispTree = new Lisp({
+      ctx.lispTree = lispify(part.substring(extract.length + res[0].length), restOfExp.next, new Lisp({
           op: ['positive', 'negative'].includes(type) ? '$' + res[0] : res[0],
           a: ctx.lispTree,
           b: lispify(extract, expectTypes[expect].next),
-      });
-      ctx.lispTree = lispify(part.substring(extract.length + res[0].length), restOfExp.next, ctx.lispTree);
+      }));
   });
   setLispType(['incrementerBefore'], (type, part, res, expect, ctx) => {
       let extract = restOfExp(part.substring(2));
@@ -918,12 +925,11 @@
           expectTypes.if.types.if,
           expectTypes.if.types.else
       ]);
-      ctx.lispTree = new Lisp({
+      ctx.lispTree = lispify(part.substring(extract.length + res[0].length), restOfExp.next, new Lisp({
           op: res[0],
           a: ctx.lispTree,
           b: lispify(extract, expectTypes[expect].next),
-      });
-      ctx.lispTree = lispify(part.substring(extract.length + res[0].length), restOfExp.next, ctx.lispTree);
+      }));
   });
   setLispType(['if'], (type, part, res, expect, ctx) => {
       let found = false;
@@ -976,7 +982,7 @@
           b: prop
       }));
   });
-  setLispType(['spreadArray', 'spreadObject'], (type, part, res, expect, ctx) => {
+  setLispType(['spreadArray', 'spreadObject', 'return'], (type, part, res, expect, ctx) => {
       ctx.lispTree = new Lisp({
           op: type,
           b: lispify(part.substring(res[0].length), expectTypes[expect].next)
@@ -985,26 +991,18 @@
   setLispType(['number', 'boolean', 'null'], (type, part, res, expect, ctx) => {
       ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, JSON.parse(res[0]));
   });
-  setLispType(['und'], (type, part, res, expect, ctx) => {
-      ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, undefined);
-  });
-  setLispType(['NaN'], (type, part, res, expect, ctx) => {
-      ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, NaN);
-  });
-  setLispType(['Infinity'], (type, part, res, expect, ctx) => {
-      ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, Infinity);
+  const constants = {
+      NaN,
+      Infinity,
+  };
+  setLispType(['und', 'NaN', 'Infinity'], (type, part, res, expect, ctx) => {
+      ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, constants[type]);
   });
   setLispType(['string', 'literal'], (type, part, res, expect, ctx) => {
       ctx.lispTree = lispify(part.substring(res[0].length), expectTypes[expect].next, new Lisp({
           op: type,
           b: parseInt(JSON.parse(res[1]), 10),
       }));
-  });
-  setLispType(['return'], (type, part, res, expect, ctx) => {
-      ctx.lispTree = new Lisp({
-          op: 'return',
-          b: lispify(part.substring(res[0].length), expectTypes[expect].next)
-      });
   });
   setLispType(['initialize'], (type, part, res, expect, ctx) => {
       const split = res[0].split(/ /g);
@@ -1038,6 +1036,7 @@
           b: Sandbox.parse(func, null).tree
       }));
   });
+  let lastType;
   function lispify(part, expected, lispTree) {
       expected = expected || ['initialize', 'expStart', 'value', 'function', 'prop', 'exp', 'modifier', 'incrementerBefore', 'expEnd'];
       if (part === undefined)
@@ -1051,22 +1050,21 @@
           if (expect === 'expEnd') {
               continue;
           }
-          if (expectTypes[expect].firstChar.has(part[0]) && !res) {
-              for (let type in expectTypes[expect].types) {
-                  if (type === 'expEnd') {
-                      continue;
-                  }
-                  if (res = expectTypes[expect].types[type].exec(part)) {
-                      lispTypes.get(type)(type, part, res, expect, ctx);
-                      break;
-                  }
+          for (let type in expectTypes[expect].types) {
+              if (type === 'expEnd') {
+                  continue;
+              }
+              if (res = expectTypes[expect].types[type].exec(part)) {
+                  lastType = type;
+                  lispTypes.get(type)(type, part, res, expect, ctx);
+                  break;
               }
           }
           if (res)
               break;
       }
       if (!res && part.length) {
-          throw Error("Unexpected token: " + part);
+          throw Error(`Unexpected token (${lastType}): ${part}`);
       }
       return ctx.lispTree;
   }
@@ -1093,96 +1091,28 @@
       }
       throw new SyntaxError('Unknown operator: ' + tree.op);
   }
-  let optimizeTypes = {};
-  let setOptimizeType = (types, fn) => {
-      types.forEach((type) => {
-          optimizeTypes[type] = fn;
-      });
-  };
-  setOptimizeType(['>',
-      '<',
-      '>=',
-      '<=',
-      '==',
-      '===',
-      '!=',
-      '!==',
-      '&&',
-      '||',
-      '&',
-      '|',
-      '+',
-      '-',
-      '/',
-      '*',
-      '**',
-      '%',
-      '$+',
-      '$-',
-      '!',
-      '~',
-      'group'], (tree) => ops.get(tree.op)(tree.a, tree.b));
-  // setOptimizeType(['string'], (tree, strings) => strings[tree.b as number]);
-  // setOptimizeType(['literal'], (tree, strings, literals) => {
-  //   if(!literals[tree.b as number].b.length) {
-  //     return literals[tree.b as number].a;
-  //   }
-  //   return tree;
-  // });
-  setOptimizeType(['createArray'], (tree) => {
-      if (!tree.b.find((item) => item instanceof Lisp)) {
-          return ops.get(tree.op)(tree.a, tree.b);
-      }
-      return tree;
-  });
-  setOptimizeType(['prop'], (tree) => {
-      if (typeof tree.b === 'number' && tree.b % 1 === 0) {
-          return tree.a[tree.b];
-      }
-      return tree;
-  });
-  function optimize(tree, strings, literals) {
-      if (!(tree instanceof Lisp)) {
-          if (Array.isArray(tree)) {
-              for (let i = 0; i < tree.length; i++) {
-                  tree[i] = optimize(tree[i], strings, literals);
-              }
-              return tree;
-          }
-          return tree;
-      }
-      else {
-          tree.a = optimize(tree.a, strings, literals);
-          tree.b = optimize(tree.b, strings, literals);
-      }
-      if (!(tree.a instanceof Lisp) && !(tree.b instanceof Lisp) && optimizeTypes[tree.op]) {
-          return optimizeTypes[tree.op](tree, strings, literals);
-      }
-      return tree;
-  }
   class Sandbox {
-      constructor(globals = {}, prototypeWhitelist = new Map(), options = { audit: false }) {
-          const protWhiteList = new Map();
-          prototypeWhitelist.forEach((w, k) => {
-              protWhiteList.set(k, new Set(w));
-          });
+      constructor(globals = Sandbox.SAFE_GLOBALS, prototypeWhitelist = Sandbox.SAFE_PROTOTYPES, options = { audit: false }) {
           const sandboxGlobal = new SandboxGlobal(globals);
           this.context = {
               sandbox: this,
               globals,
-              prototypeWhitelist: protWhiteList,
+              prototypeWhitelist,
+              globalsWhitelist: new Set(Object.values(globals)),
               options,
               globalScope: new Scope(null, globals, sandboxGlobal),
               sandboxGlobal,
-              Function: () => () => { },
-              eval: () => { },
+              replacements: new Map(),
               auditReport: {
                   prototypeAccess: {},
                   globalsAccess: new Set()
               }
           };
-          this.context.Function = sandboxFunction(this.context);
-          this.context.eval = sandboxedEval(this.context.Function);
+          const func = sandboxFunction(this.context);
+          this.context.replacements.set(Function, func);
+          this.context.replacements.set(eval, sandboxedEval(func));
+          this.context.replacements.set(setTimeout, sandboxedSetTimeout(func));
+          this.context.replacements.set(setInterval, sandboxedSetInterval(func));
       }
       static get SAFE_GLOBALS() {
           return {
@@ -1235,7 +1165,6 @@
               SandboxGlobal,
               Function,
               Boolean,
-              Object,
               Number,
               String,
               Date,
@@ -1259,8 +1188,22 @@
           ];
           let map = new Map();
           protos.forEach((proto) => {
-              map.set(proto, []);
+              map.set(proto, new Set());
           });
+          map.set(Object, new Set([
+              'entries',
+              'fromEntries',
+              'getOwnPropertyNames',
+              'is',
+              'keys',
+              'hasOwnProperty',
+              'isPrototypeOf',
+              'propertyIsEnumerable',
+              'toLocaleString',
+              'toString',
+              'valueOf',
+              'values'
+          ]));
           return map;
       }
       static audit(code, scopes = []) {
@@ -1270,6 +1213,8 @@
           }).executeTree(Sandbox.parse(code), scopes);
       }
       static parse(code, strings = [], literals = []) {
+          if (typeof code !== 'string')
+              throw new ParseError(`Cannot parse ${code}`, code);
           // console.log('parse', str);
           let str = code;
           let quote;
@@ -1346,15 +1291,17 @@
                   }
                   escape = quote && !escape && char === "\\";
               }
-              str = str.replace(/(?<=(^|[^\w_$]))(var|let|const|typeof|return|instanceof|in)(?=([^\w_$]|$))/g, (match) => {
-                  return `#${match}#`;
+              str = str.replace(/([^\w_$]|^)((var|let|const|typeof|return|instanceof|in)(?=[^\w_$]|$))/g, (match, start, keyword) => {
+                  if (keyword.length !== keyword.trim().length)
+                      throw new Error(keyword);
+                  return `${start}#${keyword}#`;
               }).replace(/\s/g, "").replace(/#/g, " ");
+              js.forEach((j) => {
+                  const a = j.map((skip) => this.parse(skip, strings, literals).tree[0]);
+                  j.length = 0;
+                  j.push(...a);
+              });
           }
-          js.forEach((j) => {
-              const a = j.map((skip) => this.parse(skip, strings, literals).tree[0]);
-              j.length = 0;
-              j.push(...a);
-          });
           let parts = [];
           let part;
           let pos = 0;
@@ -1368,9 +1315,10 @@
                   return lispify(str);
               }
               catch (e) {
+                  // throw e;
                   throw new ParseError(e.message, str);
               }
-          }).map((tree) => optimize(tree, strings, literals));
+          });
           return { tree, strings, literals };
       }
       executeTree(executionTree, scopes = []) {
@@ -1481,9 +1429,10 @@
   }
   const allowedGlobals = Sandbox.SAFE_GLOBALS;
   const allowedPrototypes = Sandbox.SAFE_PROTOTYPES;
-  allowedPrototypes.set(CustomEvent, []);
-  allowedPrototypes.set(Element, []);
-  allowedPrototypes.set(MouseEvent, []);
+  allowedPrototypes.set(CustomEvent, new Set());
+  allowedPrototypes.set(Element, new Set());
+  allowedPrototypes.set(Event, new Set());
+  allowedPrototypes.set(EventTarget, new Set());
   const sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
   const expressionCache = {};
   function saferEval(expression, dataContext, additionalHelperVariables = {}, ...scopes) {

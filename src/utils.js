@@ -60,9 +60,10 @@ export function debounce(func, wait) {
 
 const allowedGlobals = Sandbox.SAFE_GLOBALS
 const allowedPrototypes = Sandbox.SAFE_PROTOTYPES
-allowedPrototypes.set(CustomEvent, [])
-allowedPrototypes.set(Element, [])
-allowedPrototypes.set(MouseEvent, [])
+allowedPrototypes.set(CustomEvent, new Set())
+allowedPrototypes.set(Element, new Set())
+allowedPrototypes.set(Event, new Set())
+allowedPrototypes.set(EventTarget, new Set())
 const sandbox = new Sandbox(allowedGlobals, allowedPrototypes)
 const expressionCache = {}
 
