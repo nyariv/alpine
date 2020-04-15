@@ -65,16 +65,25 @@ allowedPrototypes.set(Element, new Set())
 allowedPrototypes.set(Event, new Set())
 allowedPrototypes.set(EventTarget, new Set())
 const sandbox = new Sandbox(allowedGlobals, allowedPrototypes)
-const expressionCache = {}
+const expressionCache = new WeakMap();
 
-export function saferEval(expression, dataContext, additionalHelperVariables = {}) {
+function getCache(el) {
+    let cache = expressionCache.get(el);
+    if(!cache) {
+        cache = {};
+        expressionCache.set(el, cache);
+    }
+    return cache;
+}
+
+export function saferEval(el, expression, dataContext, additionalHelperVariables = {}) {
     const code = `return ${expression};`;
-    const exec = expressionCache[code] || sandbox.compile(code)
-    expressionCache[code] = exec;
+    const exec = getCache(el)[code] || sandbox.compile(code)
+    getCache(el)[code] = exec;
     return exec(window, dataContext, additionalHelperVariables)
 }
 
-export function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}) {
+export function saferEvalNoReturn(el, expression, dataContext, additionalHelperVariables = {}) {
     // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
     if (Object.keys(dataContext).includes(expression)) {
@@ -86,8 +95,8 @@ export function saferEvalNoReturn(expression, dataContext, additionalHelperVaria
     }
 
     const code = `${expression}`
-    const exec = expressionCache[code] || sandbox.compile(code)
-    expressionCache[code] = exec;
+    const exec = getCache(el)[code] || sandbox.compile(code)
+    getCache(el)[code] = exec;
     return exec(window, dataContext, additionalHelperVariables)
 }
 

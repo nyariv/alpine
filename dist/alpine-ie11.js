@@ -5353,6 +5353,195 @@
     }
   });
 
+  var getWeakData = internalMetadata.getWeakData;
+
+
+
+
+
+
+
+
+  var setInternalState$4 = internalState.set;
+  var internalStateGetterFor$1 = internalState.getterFor;
+  var find = arrayIteration.find;
+  var findIndex = arrayIteration.findIndex;
+  var id$1 = 0;
+
+  // fallback for uncaught frozen keys
+  var uncaughtFrozenStore = function (store) {
+    return store.frozen || (store.frozen = new UncaughtFrozenStore());
+  };
+
+  var UncaughtFrozenStore = function () {
+    this.entries = [];
+  };
+
+  var findUncaughtFrozen = function (store, key) {
+    return find(store.entries, function (it) {
+      return it[0] === key;
+    });
+  };
+
+  UncaughtFrozenStore.prototype = {
+    get: function (key) {
+      var entry = findUncaughtFrozen(this, key);
+      if (entry) return entry[1];
+    },
+    has: function (key) {
+      return !!findUncaughtFrozen(this, key);
+    },
+    set: function (key, value) {
+      var entry = findUncaughtFrozen(this, key);
+      if (entry) entry[1] = value;
+      else this.entries.push([key, value]);
+    },
+    'delete': function (key) {
+      var index = findIndex(this.entries, function (it) {
+        return it[0] === key;
+      });
+      if (~index) this.entries.splice(index, 1);
+      return !!~index;
+    }
+  };
+
+  var collectionWeak = {
+    getConstructor: function (wrapper, CONSTRUCTOR_NAME, IS_MAP, ADDER) {
+      var C = wrapper(function (that, iterable) {
+        anInstance(that, C, CONSTRUCTOR_NAME);
+        setInternalState$4(that, {
+          type: CONSTRUCTOR_NAME,
+          id: id$1++,
+          frozen: undefined
+        });
+        if (iterable != undefined) iterate_1(iterable, that[ADDER], that, IS_MAP);
+      });
+
+      var getInternalState = internalStateGetterFor$1(CONSTRUCTOR_NAME);
+
+      var define = function (that, key, value) {
+        var state = getInternalState(that);
+        var data = getWeakData(anObject(key), true);
+        if (data === true) uncaughtFrozenStore(state).set(key, value);
+        else data[state.id] = value;
+        return that;
+      };
+
+      redefineAll(C.prototype, {
+        // 23.3.3.2 WeakMap.prototype.delete(key)
+        // 23.4.3.3 WeakSet.prototype.delete(value)
+        'delete': function (key) {
+          var state = getInternalState(this);
+          if (!isObject(key)) return false;
+          var data = getWeakData(key);
+          if (data === true) return uncaughtFrozenStore(state)['delete'](key);
+          return data && has(data, state.id) && delete data[state.id];
+        },
+        // 23.3.3.4 WeakMap.prototype.has(key)
+        // 23.4.3.4 WeakSet.prototype.has(value)
+        has: function has$1(key) {
+          var state = getInternalState(this);
+          if (!isObject(key)) return false;
+          var data = getWeakData(key);
+          if (data === true) return uncaughtFrozenStore(state).has(key);
+          return data && has(data, state.id);
+        }
+      });
+
+      redefineAll(C.prototype, IS_MAP ? {
+        // 23.3.3.3 WeakMap.prototype.get(key)
+        get: function get(key) {
+          var state = getInternalState(this);
+          if (isObject(key)) {
+            var data = getWeakData(key);
+            if (data === true) return uncaughtFrozenStore(state).get(key);
+            return data ? data[state.id] : undefined;
+          }
+        },
+        // 23.3.3.5 WeakMap.prototype.set(key, value)
+        set: function set(key, value) {
+          return define(this, key, value);
+        }
+      } : {
+        // 23.4.3.1 WeakSet.prototype.add(value)
+        add: function add(value) {
+          return define(this, value, true);
+        }
+      });
+
+      return C;
+    }
+  };
+
+  var es_weakMap = createCommonjsModule(function (module) {
+
+
+
+
+
+
+  var enforceIternalState = internalState.enforce;
+
+
+  var IS_IE11 = !global_1.ActiveXObject && 'ActiveXObject' in global_1;
+  var isExtensible = Object.isExtensible;
+  var InternalWeakMap;
+
+  var wrapper = function (init) {
+    return function WeakMap() {
+      return init(this, arguments.length ? arguments[0] : undefined);
+    };
+  };
+
+  // `WeakMap` constructor
+  // https://tc39.github.io/ecma262/#sec-weakmap-constructor
+  var $WeakMap = module.exports = collection('WeakMap', wrapper, collectionWeak);
+
+  // IE11 WeakMap frozen keys fix
+  // We can't use feature detection because it crash some old IE builds
+  // https://github.com/zloirock/core-js/issues/485
+  if (nativeWeakMap && IS_IE11) {
+    InternalWeakMap = collectionWeak.getConstructor(wrapper, 'WeakMap', true);
+    internalMetadata.REQUIRED = true;
+    var WeakMapPrototype = $WeakMap.prototype;
+    var nativeDelete = WeakMapPrototype['delete'];
+    var nativeHas = WeakMapPrototype.has;
+    var nativeGet = WeakMapPrototype.get;
+    var nativeSet = WeakMapPrototype.set;
+    redefineAll(WeakMapPrototype, {
+      'delete': function (key) {
+        if (isObject(key) && !isExtensible(key)) {
+          var state = enforceIternalState(this);
+          if (!state.frozen) state.frozen = new InternalWeakMap();
+          return nativeDelete.call(this, key) || state.frozen['delete'](key);
+        } return nativeDelete.call(this, key);
+      },
+      has: function has(key) {
+        if (isObject(key) && !isExtensible(key)) {
+          var state = enforceIternalState(this);
+          if (!state.frozen) state.frozen = new InternalWeakMap();
+          return nativeHas.call(this, key) || state.frozen.has(key);
+        } return nativeHas.call(this, key);
+      },
+      get: function get(key) {
+        if (isObject(key) && !isExtensible(key)) {
+          var state = enforceIternalState(this);
+          if (!state.frozen) state.frozen = new InternalWeakMap();
+          return nativeHas.call(this, key) ? nativeGet.call(this, key) : state.frozen.get(key);
+        } return nativeGet.call(this, key);
+      },
+      set: function set(key, value) {
+        if (isObject(key) && !isExtensible(key)) {
+          var state = enforceIternalState(this);
+          if (!state.frozen) state.frozen = new InternalWeakMap();
+          nativeHas.call(this, key) ? nativeSet.call(this, key, value) : state.frozen.set(key, value);
+        } else nativeSet.call(this, key, value);
+        return this;
+      }
+    });
+  }
+  });
+
   var ITERATOR$5 = wellKnownSymbol('iterator');
   var TO_STRING_TAG$3 = wellKnownSymbol('toStringTag');
   var ArrayValues = es_array_iterator.values;
@@ -5428,7 +5617,7 @@
   var SYMBOL = 'Symbol';
   var PROTOTYPE$1 = 'prototype';
   var TO_PRIMITIVE = wellKnownSymbol('toPrimitive');
-  var setInternalState$4 = internalState.set;
+  var setInternalState$5 = internalState.set;
   var getInternalState$3 = internalState.getterFor(SYMBOL);
   var ObjectPrototype$1 = Object[PROTOTYPE$1];
   var $Symbol = global_1.Symbol;
@@ -5462,7 +5651,7 @@
 
   var wrap = function (tag, description) {
     var symbol = AllSymbols[tag] = objectCreate($Symbol[PROTOTYPE$1]);
-    setInternalState$4(symbol, {
+    setInternalState$5(symbol, {
       type: SYMBOL,
       tag: tag,
       description: description
@@ -5943,7 +6132,7 @@
 
 
 
-  var setInternalState$5 = internalState.set;
+  var setInternalState$6 = internalState.set;
 
 
 
@@ -5995,7 +6184,7 @@
         RegExpWrapper
       );
 
-      if (UNSUPPORTED_Y$2 && sticky) setInternalState$5(result, { sticky: sticky });
+      if (UNSUPPORTED_Y$2 && sticky) setInternalState$6(result, { sticky: sticky });
 
       return result;
     };
@@ -6329,7 +6518,7 @@
 
 
   var getInternalState$4 = internalState.get;
-  var setInternalState$6 = internalState.set;
+  var setInternalState$7 = internalState.set;
   var ARRAY_BUFFER = 'ArrayBuffer';
   var DATA_VIEW = 'DataView';
   var PROTOTYPE$2 = 'prototype';
@@ -6397,7 +6586,7 @@
     $ArrayBuffer = function ArrayBuffer(length) {
       anInstance(this, $ArrayBuffer, ARRAY_BUFFER);
       var byteLength = toIndex(length);
-      setInternalState$6(this, {
+      setInternalState$7(this, {
         bytes: arrayFill.call(new Array(byteLength), 0),
         byteLength: byteLength
       });
@@ -6412,7 +6601,7 @@
       if (offset < 0 || offset > bufferLength) throw RangeError$1('Wrong offset');
       byteLength = byteLength === undefined ? bufferLength - offset : toLength(byteLength);
       if (offset + byteLength > bufferLength) throw RangeError$1(WRONG_LENGTH);
-      setInternalState$6(this, {
+      setInternalState$7(this, {
         buffer: buffer,
         byteLength: byteLength,
         byteOffset: offset
@@ -7263,195 +7452,6 @@
   // `%TypedArray%.prototype.toString` method
   // https://tc39.github.io/ecma262/#sec-%typedarray%.prototype.tostring
   exportTypedArrayMethod$n('toString', arrayToString, IS_NOT_ARRAY_METHOD);
-
-  var getWeakData = internalMetadata.getWeakData;
-
-
-
-
-
-
-
-
-  var setInternalState$7 = internalState.set;
-  var internalStateGetterFor$1 = internalState.getterFor;
-  var find = arrayIteration.find;
-  var findIndex = arrayIteration.findIndex;
-  var id$1 = 0;
-
-  // fallback for uncaught frozen keys
-  var uncaughtFrozenStore = function (store) {
-    return store.frozen || (store.frozen = new UncaughtFrozenStore());
-  };
-
-  var UncaughtFrozenStore = function () {
-    this.entries = [];
-  };
-
-  var findUncaughtFrozen = function (store, key) {
-    return find(store.entries, function (it) {
-      return it[0] === key;
-    });
-  };
-
-  UncaughtFrozenStore.prototype = {
-    get: function (key) {
-      var entry = findUncaughtFrozen(this, key);
-      if (entry) return entry[1];
-    },
-    has: function (key) {
-      return !!findUncaughtFrozen(this, key);
-    },
-    set: function (key, value) {
-      var entry = findUncaughtFrozen(this, key);
-      if (entry) entry[1] = value;
-      else this.entries.push([key, value]);
-    },
-    'delete': function (key) {
-      var index = findIndex(this.entries, function (it) {
-        return it[0] === key;
-      });
-      if (~index) this.entries.splice(index, 1);
-      return !!~index;
-    }
-  };
-
-  var collectionWeak = {
-    getConstructor: function (wrapper, CONSTRUCTOR_NAME, IS_MAP, ADDER) {
-      var C = wrapper(function (that, iterable) {
-        anInstance(that, C, CONSTRUCTOR_NAME);
-        setInternalState$7(that, {
-          type: CONSTRUCTOR_NAME,
-          id: id$1++,
-          frozen: undefined
-        });
-        if (iterable != undefined) iterate_1(iterable, that[ADDER], that, IS_MAP);
-      });
-
-      var getInternalState = internalStateGetterFor$1(CONSTRUCTOR_NAME);
-
-      var define = function (that, key, value) {
-        var state = getInternalState(that);
-        var data = getWeakData(anObject(key), true);
-        if (data === true) uncaughtFrozenStore(state).set(key, value);
-        else data[state.id] = value;
-        return that;
-      };
-
-      redefineAll(C.prototype, {
-        // 23.3.3.2 WeakMap.prototype.delete(key)
-        // 23.4.3.3 WeakSet.prototype.delete(value)
-        'delete': function (key) {
-          var state = getInternalState(this);
-          if (!isObject(key)) return false;
-          var data = getWeakData(key);
-          if (data === true) return uncaughtFrozenStore(state)['delete'](key);
-          return data && has(data, state.id) && delete data[state.id];
-        },
-        // 23.3.3.4 WeakMap.prototype.has(key)
-        // 23.4.3.4 WeakSet.prototype.has(value)
-        has: function has$1(key) {
-          var state = getInternalState(this);
-          if (!isObject(key)) return false;
-          var data = getWeakData(key);
-          if (data === true) return uncaughtFrozenStore(state).has(key);
-          return data && has(data, state.id);
-        }
-      });
-
-      redefineAll(C.prototype, IS_MAP ? {
-        // 23.3.3.3 WeakMap.prototype.get(key)
-        get: function get(key) {
-          var state = getInternalState(this);
-          if (isObject(key)) {
-            var data = getWeakData(key);
-            if (data === true) return uncaughtFrozenStore(state).get(key);
-            return data ? data[state.id] : undefined;
-          }
-        },
-        // 23.3.3.5 WeakMap.prototype.set(key, value)
-        set: function set(key, value) {
-          return define(this, key, value);
-        }
-      } : {
-        // 23.4.3.1 WeakSet.prototype.add(value)
-        add: function add(value) {
-          return define(this, value, true);
-        }
-      });
-
-      return C;
-    }
-  };
-
-  var es_weakMap = createCommonjsModule(function (module) {
-
-
-
-
-
-
-  var enforceIternalState = internalState.enforce;
-
-
-  var IS_IE11 = !global_1.ActiveXObject && 'ActiveXObject' in global_1;
-  var isExtensible = Object.isExtensible;
-  var InternalWeakMap;
-
-  var wrapper = function (init) {
-    return function WeakMap() {
-      return init(this, arguments.length ? arguments[0] : undefined);
-    };
-  };
-
-  // `WeakMap` constructor
-  // https://tc39.github.io/ecma262/#sec-weakmap-constructor
-  var $WeakMap = module.exports = collection('WeakMap', wrapper, collectionWeak);
-
-  // IE11 WeakMap frozen keys fix
-  // We can't use feature detection because it crash some old IE builds
-  // https://github.com/zloirock/core-js/issues/485
-  if (nativeWeakMap && IS_IE11) {
-    InternalWeakMap = collectionWeak.getConstructor(wrapper, 'WeakMap', true);
-    internalMetadata.REQUIRED = true;
-    var WeakMapPrototype = $WeakMap.prototype;
-    var nativeDelete = WeakMapPrototype['delete'];
-    var nativeHas = WeakMapPrototype.has;
-    var nativeGet = WeakMapPrototype.get;
-    var nativeSet = WeakMapPrototype.set;
-    redefineAll(WeakMapPrototype, {
-      'delete': function (key) {
-        if (isObject(key) && !isExtensible(key)) {
-          var state = enforceIternalState(this);
-          if (!state.frozen) state.frozen = new InternalWeakMap();
-          return nativeDelete.call(this, key) || state.frozen['delete'](key);
-        } return nativeDelete.call(this, key);
-      },
-      has: function has(key) {
-        if (isObject(key) && !isExtensible(key)) {
-          var state = enforceIternalState(this);
-          if (!state.frozen) state.frozen = new InternalWeakMap();
-          return nativeHas.call(this, key) || state.frozen.has(key);
-        } return nativeHas.call(this, key);
-      },
-      get: function get(key) {
-        if (isObject(key) && !isExtensible(key)) {
-          var state = enforceIternalState(this);
-          if (!state.frozen) state.frozen = new InternalWeakMap();
-          return nativeHas.call(this, key) ? nativeGet.call(this, key) : state.frozen.get(key);
-        } return nativeGet.call(this, key);
-      },
-      set: function set(key, value) {
-        if (isObject(key) && !isExtensible(key)) {
-          var state = enforceIternalState(this);
-          if (!state.frozen) state.frozen = new InternalWeakMap();
-          nativeHas.call(this, key) ? nativeSet.call(this, key, value) : state.frozen.set(key, value);
-        } else nativeSet.call(this, key, value);
-        return this;
-      }
-    });
-  }
-  });
 
   // `WeakSet` constructor
   // https://tc39.github.io/ecma262/#sec-weakset-constructor
@@ -9311,16 +9311,28 @@
   allowedPrototypes.set(Event, new Set());
   allowedPrototypes.set(EventTarget, new Set());
   var sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
-  var expressionCache = {};
-  function saferEval(expression, dataContext) {
-    var additionalHelperVariables = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+  var expressionCache = new WeakMap();
+
+  function getCache(el) {
+    var cache = expressionCache.get(el);
+
+    if (!cache) {
+      cache = {};
+      expressionCache.set(el, cache);
+    }
+
+    return cache;
+  }
+
+  function saferEval(el, expression, dataContext) {
+    var additionalHelperVariables = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
     var code = "return ".concat(expression, ";");
-    var exec = expressionCache[code] || sandbox.compile(code);
-    expressionCache[code] = exec;
+    var exec = getCache(el)[code] || sandbox.compile(code);
+    getCache(el)[code] = exec;
     return exec(window, dataContext, additionalHelperVariables);
   }
-  function saferEvalNoReturn(expression, dataContext) {
-    var additionalHelperVariables = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+  function saferEvalNoReturn(el, expression, dataContext) {
+    var additionalHelperVariables = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
 
     // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
@@ -9335,8 +9347,8 @@
     }
 
     var code = "".concat(expression);
-    var exec = expressionCache[code] || sandbox.compile(code);
-    expressionCache[code] = exec;
+    var exec = getCache(el)[code] || sandbox.compile(code);
+    getCache(el)[code] = exec;
     return exec(window, dataContext, additionalHelperVariables);
   }
   var xAttrRE = /^x-(on|bind|data|text|html|model|if|for|show|cloak|transition|ref)\b/;
@@ -10425,7 +10437,7 @@
       var dataAttr = this.$el.getAttribute('x-data');
       var dataExpression = dataAttr === '' ? '{}' : dataAttr;
       var initExpression = this.$el.getAttribute('x-init');
-      this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, {});
+      this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(el, dataExpression, {});
       /* IE11-ONLY:START */
       // For IE11, add our magic properties to the original data for access.
       // The Proxy polyfill does not allow properties to be added after creation.
@@ -10800,7 +10812,7 @@
         var extraVars = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {
           _newArrowCheck(this, _this17);
         }.bind(this);
-        return saferEval(expression, this.$data, _objectSpread2({}, extraVars(), {
+        return saferEval(el, expression, this.$data, _objectSpread2({}, extraVars(), {
           $dispatch: this.getDispatchFunction(el)
         }));
       }
@@ -10812,7 +10824,7 @@
         var extraVars = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {
           _newArrowCheck(this, _this18);
         }.bind(this);
-        return saferEvalNoReturn(expression, this.$data, _objectSpread2({}, extraVars(), {
+        return saferEvalNoReturn(el, expression, this.$data, _objectSpread2({}, extraVars(), {
           $dispatch: this.getDispatchFunction(el)
         }));
       }
@@ -10857,7 +10869,7 @@
               (function () {
                 var _this22 = this;
 
-                var rawData = saferEval(mutations[i].target.getAttribute('x-data'), {});
+                var rawData = saferEval(mutations[i].target, mutations[i].target.getAttribute('x-data'), {});
                 Object.keys(rawData).forEach(function (key) {
                   _newArrowCheck(this, _this22);
 

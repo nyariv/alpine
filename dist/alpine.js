@@ -1445,14 +1445,26 @@
   allowedPrototypes.set(Event, new Set());
   allowedPrototypes.set(EventTarget, new Set());
   const sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
-  const expressionCache = {};
-  function saferEval(expression, dataContext, additionalHelperVariables = {}) {
+  const expressionCache = new WeakMap();
+
+  function getCache(el) {
+    let cache = expressionCache.get(el);
+
+    if (!cache) {
+      cache = {};
+      expressionCache.set(el, cache);
+    }
+
+    return cache;
+  }
+
+  function saferEval(el, expression, dataContext, additionalHelperVariables = {}) {
     const code = `return ${expression};`;
-    const exec = expressionCache[code] || sandbox.compile(code);
-    expressionCache[code] = exec;
+    const exec = getCache(el)[code] || sandbox.compile(code);
+    getCache(el)[code] = exec;
     return exec(window, dataContext, additionalHelperVariables);
   }
-  function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}) {
+  function saferEvalNoReturn(el, expression, dataContext, additionalHelperVariables = {}) {
     // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
     if (Object.keys(dataContext).includes(expression)) {
@@ -1466,8 +1478,8 @@
     }
 
     const code = `${expression}`;
-    const exec = expressionCache[code] || sandbox.compile(code);
-    expressionCache[code] = exec;
+    const exec = getCache(el)[code] || sandbox.compile(code);
+    getCache(el)[code] = exec;
     return exec(window, dataContext, additionalHelperVariables);
   }
   const xAttrRE = /^x-(on|bind|data|text|html|model|if|for|show|cloak|transition|ref)\b/;
@@ -2600,7 +2612,7 @@
       const dataAttr = this.$el.getAttribute('x-data');
       const dataExpression = dataAttr === '' ? '{}' : dataAttr;
       const initExpression = this.$el.getAttribute('x-init');
-      this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, {});
+      this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(el, dataExpression, {});
       // Construct a Proxy-based observable. This will be used to handle reactivity.
 
       let {
@@ -2852,13 +2864,13 @@
     }
 
     evaluateReturnExpression(el, expression, extraVars = () => {}) {
-      return saferEval(expression, this.$data, _objectSpread2({}, extraVars(), {
+      return saferEval(el, expression, this.$data, _objectSpread2({}, extraVars(), {
         $dispatch: this.getDispatchFunction(el)
       }));
     }
 
     evaluateCommandExpression(el, expression, extraVars = () => {}) {
-      return saferEvalNoReturn(expression, this.$data, _objectSpread2({}, extraVars(), {
+      return saferEvalNoReturn(el, expression, this.$data, _objectSpread2({}, extraVars(), {
         $dispatch: this.getDispatchFunction(el)
       }));
     }
@@ -2886,7 +2898,7 @@
           if (!(closestParentComponent && closestParentComponent.isSameNode(this.$el))) return;
 
           if (mutations[i].type === 'attributes' && mutations[i].attributeName === 'x-data') {
-            const rawData = saferEval(mutations[i].target.getAttribute('x-data'), {});
+            const rawData = saferEval(mutations[i].target, mutations[i].target.getAttribute('x-data'), {});
             Object.keys(rawData).forEach(key => {
               if (this.$data[key] !== rawData[key]) {
                 this.$data[key] = rawData[key];
