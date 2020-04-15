@@ -37,11 +37,11 @@ test('x-data can use attributes from a reusable function', async () => {
             <span x-text="foo"></span>
         </div>
     `
-        Alpine.scope('test', function () {
+        test = function() {
             return {
                 foo: 'bar',
             }
-        })
+        }
 
     Alpine.start()
 
@@ -107,7 +107,7 @@ test('Proxies are not nested and duplicated when manipulating an array', async (
 })
 
 test('component refresh one time per update whatever the number of mutations in the update', async () => {
-    Alpine.scope('refreshCount', 0)
+    window.refreshCount = 0
 
     document.body.innerHTML = `
         <div x-data="{ items: ['foo', 'bar'], qux: 'quux', test() {return ++refreshCount} }">
@@ -118,9 +118,9 @@ test('component refresh one time per update whatever the number of mutations in 
 
     Alpine.start()
 
-    expect(Alpine.scope('refreshCount')).toEqual(1)
+    expect(refreshCount).toEqual(1)
 
     document.querySelector('button').click()
 
-    await wait(() => { expect(Alpine.scope('refreshCount')).toEqual(2) })
+    await wait(() => { expect(refreshCount).toEqual(2) })
 })

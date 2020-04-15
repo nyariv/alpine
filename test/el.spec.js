@@ -22,15 +22,13 @@ test('$el', async () => {
 })
 
 test('$el doesnt return a proxy', async () => {
-    window.isProxy
-    Alpine.scope('data', {
-        setIsProxy: function (el) {
-            window.isProxy = !! el.isProxy
-        }
-    })
+    var isProxy
+    window.setIsProxy = function (el) {
+        isProxy = !! el.isProxy
+    }
 
     document.body.innerHTML = `
-        <div x-data="data">
+        <div x-data>
             <button @click="setIsProxy($el)"></button>
         </div>
     `
@@ -39,5 +37,5 @@ test('$el doesnt return a proxy', async () => {
 
     document.querySelector('button').click()
 
-    expect(window.isProxy).toEqual(false)
+    expect(isProxy).toEqual(false)
 })

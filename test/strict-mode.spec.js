@@ -8,14 +8,14 @@ global.MutationObserver = class {
 test('Proxy does not error in strict mode when reactivity is suspended', async () => {
     "use strict"
 
-    Alpine.scope('statCounter', function () {
+    global.statCounter = function () {
         return {
             count: 0,
             init() {
                 this.count = 1200;
             }
         }
-    })
+    }
     document.body.innerHTML = `
         <div class="my-48">
             <div x-data="statCounter()" x-init="init()">

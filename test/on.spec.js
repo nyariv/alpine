@@ -99,7 +99,6 @@ test('.window modifier', async () => {
 
 test('unbind global event handler when element is removed', async () => {
     document._callCount = 0
-    Alpine.scope('document', document)
 
     document.body.innerHTML = `
         <div x-data="{}">
@@ -121,7 +120,6 @@ test('unbind global event handler when element is removed', async () => {
 })
 
 test('.document modifier', async () => {
-    Alpine.scope('document', document)
     document.body.innerHTML = `
         <div x-data="{ foo: 'bar' }">
             <div x-on:click.document="foo = 'baz'"></div>
@@ -350,7 +348,7 @@ test('event with colon', async () => {
 })
 
 test('prevent default action when an event returns false', async () => {
-    Alpine.scope('confirm', jest.fn().mockImplementation(() => false))
+    window.confirm = jest.fn().mockImplementation(() => false)
 
     document.body.innerHTML = `
         <div x-data="{}">
@@ -366,7 +364,7 @@ test('prevent default action when an event returns false', async () => {
 
     expect(document.querySelector('input').checked).toEqual(false)
 
-    Alpine.scope('confirm', jest.fn().mockImplementation(() => true))
+    window.confirm = jest.fn().mockImplementation(() => true)
 
     document.querySelector('input').click()
 

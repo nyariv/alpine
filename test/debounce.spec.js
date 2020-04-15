@@ -18,12 +18,12 @@ test('x-on with debounce modifier', async () => {
 
     fireEvent.input(document.querySelector('input'), { target: { value: 1 }})
 
-    await timeout(10)
+    await timeout(20)
 
     fireEvent.input(document.querySelector('input'), { target: { value: 1 }})
     expect(document.querySelector('span').innerText).toEqual(0)
 
-    await timeout(10)
+    await timeout(20)
 
     fireEvent.input(document.querySelector('input'), { target: { value: 1 }})
     expect(document.querySelector('span').innerText).toEqual(0)
@@ -32,7 +32,7 @@ test('x-on with debounce modifier', async () => {
 
     expect(document.querySelector('span').innerText).toEqual(0)
 
-    await timeout(20)
+    await timeout(40)
 
     expect(document.querySelector('span').innerText).toEqual(1)
 })

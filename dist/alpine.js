@@ -385,7 +385,7 @@
       },
       function: {
           types: {
-              arrowFunc: /^\(?(([a-zA-Z\$_][a-zA-Z\d\$_]*,?)*)(\))?=>({)?/
+              arrowFunc: /^\(?(((\.\.\.)?[a-zA-Z\$_][a-zA-Z\d\$_]*,?)*)(\))?=>({)?/
           },
           next: [
               'expEnd'
@@ -537,7 +537,8 @@
           if (a === null) {
               throw new TypeError(`Cannot get property ${b} of null`);
           }
-          if (typeof a === 'undefined') {
+          const type = typeof a;
+          if (type === 'undefined') {
               let prop = scope.get(b);
               if (prop.context === undefined)
                   throw new ReferenceError(`${b} is not defined`);
@@ -555,20 +556,23 @@
               return prop;
           }
           let ok = false;
-          if (typeof a === 'number') {
-              a = new Number(a);
+          if (type !== 'object') {
+              if (type === 'number') {
+                  a = new Number(a);
+              }
+              else if (type === 'string') {
+                  a = new String(a);
+              }
+              else if (type === 'boolean') {
+                  a = new Boolean(a);
+              }
           }
-          if (typeof a === 'string') {
-              a = new String(a);
-          }
-          if (typeof a === 'boolean') {
-              a = new Boolean(a);
-          }
-          if (typeof a.hasOwnProperty === 'undefined') {
+          else if (typeof a.hasOwnProperty === 'undefined') {
               return new Prop(undefined, b);
           }
-          ok = typeof a !== 'function' && (a.hasOwnProperty(b) || typeof b === 'number');
-          if (!ok && context.options.audit) {
+          const isFunction = type === 'function';
+          ok = !isFunction && (a.hasOwnProperty(b) || typeof b === 'number');
+          if (context.options.audit && !ok) {
               ok = true;
               if (typeof b === 'string') {
                   let prot = a.constructor.prototype;
@@ -583,7 +587,7 @@
               }
           }
           if (!ok) {
-              if (typeof a === 'function') {
+              if (isFunction) {
                   if (!['name', 'length', 'constructor'].includes(b) && a.hasOwnProperty(b)) {
                       const whitelist = context.prototypeWhitelist.get(a);
                       if (whitelist && (!whitelist.size || whitelist.has(b))) ;
@@ -611,7 +615,7 @@
           if (a[b] === globalThis) {
               return context.globalScope.get('this');
           }
-          let g = obj.isGlobal || (typeof a === 'function' && a.name !== 'sandboxArrowFunction') || context.globalsWhitelist.has(a);
+          let g = obj.isGlobal || (isFunction && a.name !== 'sandboxArrowFunction') || context.globalsWhitelist.has(a);
           return new Prop(a, b, false, g);
       },
       'call': (a, b, obj, context, scope) => {
@@ -620,10 +624,18 @@
           if (typeof a !== 'function') {
               throw new TypeError(`${obj.prop} is not a function`);
           }
+          const args = b.map((item) => {
+              if (item instanceof SpreadArray) {
+                  return item.item;
+              }
+              else {
+                  return [item];
+              }
+          }).flat();
           if (typeof obj === 'function') {
-              return obj(...b.map((item) => exec(item, scope, context)));
+              return obj(...args.map((item) => exec(item, scope, context)));
           }
-          return obj.context[obj.prop](...b.map((item) => exec(item, scope, context)));
+          return obj.context[obj.prop](...args.map((item) => exec(item, scope, context)));
       },
       'createObject': (a, b, obj, context, scope) => {
           let res = {};
@@ -653,23 +665,14 @@
       },
       'keyVal': (a, b) => new KeyVal(a, b),
       'createArray': (a, b, obj, context, scope) => {
-          let arrs = [];
-          let curr = [];
-          b.forEach((item) => {
+          return b.map((item) => {
               if (item instanceof SpreadArray) {
-                  if (curr.length) {
-                      arrs.push(curr);
-                      curr = [];
-                  }
-                  arrs.push(item.item);
+                  return item.item;
               }
               else {
-                  curr.push(exec(item, scope, context));
+                  return [item];
               }
-          });
-          if (curr.length)
-              arrs.push(curr);
-          return arrs.flat();
+          }).flat().map((item) => exec(item, scope, context));
       },
       'group': (a, b) => b,
       'string': (a, b, obj, context) => context.strings[b],
@@ -794,7 +797,12 @@
           const sandboxArrowFunction = (...args) => {
               const vars = {};
               a.forEach((arg, i) => {
-                  vars[arg] = args[i];
+                  if (arg.startsWith('...')) {
+                      vars[arg.substring(3)] = args.slice(i);
+                  }
+                  else {
+                      vars[arg] = args[i];
+                  }
               });
               return context.sandbox.executeTree({
                   tree: b,
@@ -810,26 +818,26 @@
       ops.set(op, ops2[op]);
   }
   let lispTypes = new Map();
-  let setLispType = (types, fn) => {
+  const setLispType = (types, fn) => {
       types.forEach((type) => {
           lispTypes.set(type, fn);
       });
   };
+  const closingsCreate = {
+      'createArray': /^\]/,
+      'createObject': /^\}/,
+      'group': /^\)/,
+      'arrayProp': /^\]/,
+      'call': /^\)/
+  };
   setLispType(['createArray', 'createObject', 'group', 'arrayProp', 'call'], (type, part, res, expect, ctx) => {
       let extract = "";
-      let closings = {
-          'createArray': ']',
-          'createObject': '}',
-          'group': ')',
-          'arrayProp': ']',
-          'call': ')'
-      };
       let arg = [];
       let end = false;
       let i = 1;
       while (i < part.length && !end) {
           extract = restOfExp(part.substring(i), [
-              new RegExp('^\\' + closings[type]),
+              closingsCreate[type],
               /^,/
           ]);
           i += extract.length;
@@ -1022,14 +1030,21 @@
   });
   setLispType(['arrowFunc'], (type, part, res, expect, ctx) => {
       let args = res[1] ? res[1].split(",") : [];
-      if (res[3]) {
+      if (res[4]) {
           if (res[0][0] !== '(')
               throw new SyntaxError('Unstarted inline function brackets: ' + res[0]);
       }
       else if (args.length) {
           args = [args.pop()];
       }
-      const func = (res[4] ? '' : ' return ') + restOfExp(part.substring(res[0].length), res[4] ? [/^}/] : [/^[,;\)\}\]]/]);
+      let ended = false;
+      args.forEach((arg) => {
+          if (ended)
+              throw new SyntaxError('Rest parameter must be last formal parameter');
+          if (arg.startsWith('...'))
+              ended = true;
+      });
+      const func = (res[5] ? '' : ' return ') + restOfExp(part.substring(res[0].length), res[5] ? [/^}/] : [/^[,;\)\}\]]/]);
       ctx.lispTree = lispify(part.substring(res[0].length + func.length + 1), expectTypes[expect].next, new Lisp({
           op: 'arrowFunc',
           a: args,
@@ -1102,11 +1117,7 @@
               options,
               globalScope: new Scope(null, globals, sandboxGlobal),
               sandboxGlobal,
-              replacements: new Map(),
-              auditReport: {
-                  prototypeAccess: {},
-                  globalsAccess: new Set()
-              }
+              replacements: new Map()
           };
           const func = sandboxFunction(this.context);
           this.context.replacements.set(Function, func);
@@ -1435,16 +1446,15 @@
   allowedPrototypes.set(EventTarget, new Set());
   const sandbox = new Sandbox(allowedGlobals, allowedPrototypes);
   const expressionCache = {};
-  function saferEval(expression, dataContext, additionalHelperVariables = {}, ...scopes) {
+  function saferEval(expression, dataContext, additionalHelperVariables = {}) {
     const code = `return ${expression};`;
     const exec = expressionCache[code] || sandbox.compile(code);
     expressionCache[code] = exec;
-    return exec(...scopes, dataContext, additionalHelperVariables, {});
+    return exec(window, dataContext, additionalHelperVariables);
   }
-  function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}, ...scopes) {
-    const code = `${expression}`; // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
+  function saferEvalNoReturn(expression, dataContext, additionalHelperVariables = {}) {
+    // For the cases when users pass only a function reference to the caller: `x-on:click="foo"`
     // Where "foo" is a function. Also, we'll pass the function the event instance when we call it.
-
     if (Object.keys(dataContext).includes(expression)) {
       const methodReference = dataContext[expression];
 
@@ -1455,9 +1465,10 @@
       return methodReference;
     }
 
+    const code = `${expression}`;
     const exec = expressionCache[code] || sandbox.compile(code);
     expressionCache[code] = exec;
-    return exec(...scopes, dataContext, additionalHelperVariables, {});
+    return exec(window, dataContext, additionalHelperVariables);
   }
   const xAttrRE = /^x-(on|bind|data|text|html|model|if|for|show|cloak|transition|ref)\b/;
   function isXAttr(attr) {
@@ -2583,14 +2594,13 @@
     return copy;
   }
 
-  const globalScope = {};
   class Component {
     constructor(el, seedDataForCloning = null) {
       this.$el = el;
       const dataAttr = this.$el.getAttribute('x-data');
       const dataExpression = dataAttr === '' ? '{}' : dataAttr;
       const initExpression = this.$el.getAttribute('x-init');
-      this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, globalScope);
+      this.unobservedData = seedDataForCloning ? seedDataForCloning : saferEval(dataExpression, {});
       // Construct a Proxy-based observable. This will be used to handle reactivity.
 
       let {
@@ -2844,13 +2854,13 @@
     evaluateReturnExpression(el, expression, extraVars = () => {}) {
       return saferEval(expression, this.$data, _objectSpread2({}, extraVars(), {
         $dispatch: this.getDispatchFunction(el)
-      }), globalScope);
+      }));
     }
 
     evaluateCommandExpression(el, expression, extraVars = () => {}) {
       return saferEvalNoReturn(expression, this.$data, _objectSpread2({}, extraVars(), {
         $dispatch: this.getDispatchFunction(el)
-      }), globalScope);
+      }));
     }
 
     getDispatchFunction(el) {
@@ -2912,7 +2922,7 @@
       return new Proxy(refObj, {
         get(object, property) {
           if (property === '$isAlpineProxy') return true;
-          if (property === 'hasOwnProperty') return key => this.has(null, key);
+          if (property === 'hasOwnProperty') return key => true;
           var ref; // We can't just query the DOM because it's hard to filter out refs in
           // nested components.
 
@@ -2922,19 +2932,6 @@
             }
           });
           return ref;
-        },
-
-        has(target, property) {
-          if (property === '$isAlpineProxy') return true;
-          var ref; // We can't just query the DOM because it's hard to filter out refs in
-          // nested components.
-
-          self.walkAndSkipNestedComponents(self.$el, el => {
-            if (el.hasAttribute('x-ref') && el.getAttribute('x-ref') === property) {
-              ref = el;
-            }
-          });
-          return !!ref;
         }
 
       });
@@ -3008,13 +3005,6 @@
       if (!newEl.__x) {
         newEl.__x = new Component(newEl, component.getUnobservedData());
       }
-    },
-    scope: function scope(name, data) {
-      if (data !== undefined) {
-        globalScope[name] = data;
-      }
-
-      return globalScope[name];
     }
   };
 
