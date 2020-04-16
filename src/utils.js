@@ -58,11 +58,20 @@ export function debounce(func, wait) {
     }
 }
 
+const allowedGlobals = Sandbox.SAFE_GLOBALS
+const allowedPrototypes = Sandbox.SAFE_PROTOTYPES
+allowedPrototypes.set(CustomEvent, new Set())
+allowedPrototypes.set(Element, new Set())
+allowedPrototypes.set(Event, new Set())
+allowedPrototypes.set(EventTarget, new Set())
+const sandbox = new Sandbox(allowedGlobals, allowedPrototypes)
+const expressionCache = new WeakMap()
+
 function getExecutionTree(el, code) {
-    let cache = expressionCache.get(el);
+    let cache = expressionCache.get(el)
     if(!cache) {
         cache = {};
-        expressionCache.set(el, cache);
+        expressionCache.set(el, cache)
     }
     if (!cache[code]) {
         cache[code] = sandbox.compile(code)
@@ -71,7 +80,7 @@ function getExecutionTree(el, code) {
 }
 
 export function saferEval(el, expression, dataContext, additionalHelperVariables = {}) {
-    const code = `return ${expression};`;
+    const code = `return ${expression};`
     const exec = getExecutionTree(el, code)
     return exec(window, dataContext, additionalHelperVariables)
 }
